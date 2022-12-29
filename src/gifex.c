@@ -1,11 +1,7 @@
 //
 //  gifex.c - Animated GIF loader for X680x0 with XEiJ graphic extension support
 //
-//  2022,2023 tantan
-//
-//  https://github.com/tantanGH/gifex/
-//
-//  reference: https://www.tohoho-web.com/wwwgif.htm#GIFPatent
+//  reference: https://www.tohoho-web.com/wwwgif.htm
 //
 
 #include <stdio.h>
@@ -17,7 +13,7 @@
 #include <iocslib.h>
 
 #define VERSION "0.1.0"
-#define DEBUG
+//#define DEBUG
 
 // global variables (flags)
 int g_clear_screen = 0;                 // 1:clear screen by picture
@@ -25,9 +21,8 @@ int g_extended_graphic_mode = 0;        // 1:XEiJ extended graphic mode 7
 int g_information_mode = 0;             // 1:show PNG file information
 int g_centering_mode = 0;               // 1:centering yes
 int g_wait_mode = 0;                    // 1:wait key input
-int g_reversed_scroll = 0;              // 1:cursor down = up scroll
-int g_random_mode = 0;                  // 1:display one image randomly
 int g_brightness = 100;                 // 0-100% brightness
+int g_memory_cache_mode = 0;            // 1:load all images to memory before animation
 
 // global variables (buffers)
 int g_buffer_memory_size_factor = 8;    // in=64KB*factor, out=128KB*factor
@@ -270,9 +265,11 @@ typedef struct {    // to preserve status to resume decoding
   int available;
   int old_code;
   int code_size;
-  short code_mask;
+  int code_mask;
   int first;
-  int top;
+  int pixel_sp;
+  int datum;
+  int bits;
 } LZW_INF;
 
 #define MAX_STACK_SIZE 4096
@@ -293,7 +290,9 @@ static void initialize_lzw(LZW_INF* lzw, int min_code_size) {
 
   lzw->code_mask = ( 1 << lzw->code_size ) - 1;
   lzw->first = 0;
-  lzw->top = 0;
+  lzw->pixel_sp = 0;
+  lzw->datum = 0;
+  lzw->bits = 0;
 
   for (int i = 0; i < lzw->clear_code; i++) {
     lzw_prefix[i] = 0;
@@ -304,31 +303,39 @@ static void initialize_lzw(LZW_INF* lzw, int min_code_size) {
 
 static int decode_lzw(LZW_INF* lzw, unsigned char* input_buffer, int input_len, unsigned char* output_buffer, int pixel_count) {
 
-  short datum = 0;
-  int bits = 0;
-
-  int top = lzw->top;
-  
   int output_buffer_ofs = 0;
   int input_buffer_ofs = 0;
-  
-  while (input_buffer_ofs < input_len && output_buffer_ofs < pixel_count) {
 
-    short code, in_code;
+ #ifdef DEBUG 
+//    printf("output_buffer_ofs=%d,pixel_count=%d\n",output_buffer_ofs,pixel_count);
+#endif
+ 
+  while (output_buffer_ofs < pixel_count) {
 
-    if (top == 0) {
+    int code, in_code;
 
-      if (bits < lzw->code_size) {
-        datum += input_buffer[ input_buffer_ofs++ ] << bits;
-        bits += 8;
+#ifdef DEBUG 
+ //   printf("output_buffer_ofs=%d,pixel_count=%d,datum=%d,bits=%d,sp=%d,mask=%x,input_buffer_ofs=%d,code_size=%d\n",output_buffer_ofs,pixel_count,lzw->datum,lzw->bits,lzw->pixel_sp,lzw->code_mask,input_buffer_ofs,lzw->code_size);
+#endif
+
+    if (lzw->pixel_sp == 0) {
+
+      if (lzw->bits < lzw->code_size) {
+        lzw->datum += input_buffer[ input_buffer_ofs ++ ] << lzw->bits;
+        lzw->bits += 8;
         continue;
       }
 
-      code = datum & lzw->code_mask;
-      datum >>= lzw->code_size;
-      bits -= lzw->code_size;
+      code = lzw->datum & lzw->code_mask;
+      lzw->datum >>= lzw->code_size;
+      lzw->bits -= lzw->code_size;
+
+ //     printf("code=%d\n",code);
 
       if (code > lzw->available || code == lzw->end_code) {
+#ifdef DEBUG 
+ //       printf("code=%d,available=%d,end_code=%d\n",code,lzw->available,lzw->end_code);
+#endif
         break;
       }
 
@@ -341,7 +348,7 @@ static int decode_lzw(LZW_INF* lzw, unsigned char* input_buffer, int input_len, 
       }
 
       if (lzw->old_code == -1) {
-        lzw_pixel_stack[ top++ ] = lzw_suffix[ code ];
+        lzw_pixel_stack[ lzw->pixel_sp ++ ] = lzw_suffix[ code ];
         lzw->old_code = code;
         lzw->first = code;
         continue;
@@ -350,40 +357,48 @@ static int decode_lzw(LZW_INF* lzw, unsigned char* input_buffer, int input_len, 
       in_code = code;
 
       if (code == lzw->available) {
-        lzw_pixel_stack[ top++ ] = lzw->first;
+        lzw_pixel_stack[ lzw->pixel_sp ++ ] = lzw->first;
         code = lzw->old_code;
       }
 
       while (code > lzw->clear_code) {
-        lzw_pixel_stack[ top++ ] = lzw_suffix[ code ];
+        lzw_pixel_stack[ lzw->pixel_sp ++ ] = lzw_suffix[ code ];
         code = lzw_prefix[ code ];
       }
 
       lzw->first = lzw_suffix[ code ] & 0xff;
-      lzw_pixel_stack[ top ++ ] = lzw->first;
+      lzw_pixel_stack[ lzw->pixel_sp ++ ] = lzw->first;
 
       if (lzw->available < MAX_STACK_SIZE) {
         lzw_prefix[ lzw->available ] = lzw->old_code;
         lzw_suffix[ lzw->available ] = lzw->first;
-        lzw->available++;
+        lzw->available ++;
 
         if ((lzw->available & lzw->code_mask) == 0 && lzw->available < MAX_STACK_SIZE) {
-          lzw->code_size++;
+          lzw->code_size ++;
           lzw->code_mask += lzw->available;
         }
       }
 
       lzw->old_code = in_code;
 
+      if (lzw->bits <= 0 && input_buffer_ofs >= input_len) {
+  #ifdef DEBUG
+        printf("no more bit to read.\n");
+  #endif
+        break;    // no more bits to read
+      }
+
     }
 
-    top--;
-    output_buffer[ output_buffer_ofs++ ] = lzw_pixel_stack[ top ];
+    lzw->pixel_sp --;
+    output_buffer[ output_buffer_ofs ++ ] = lzw_pixel_stack[ lzw->pixel_sp ];
 
   }
 
-  lzw->top = top;
-
+#ifdef DEBUG
+  printf("input_buffer_ofs=%d,input_len=%d,output_buffer_ofs=%d\n",input_buffer_ofs,input_len,output_buffer_ofs);
+#endif
   return output_buffer_ofs;
 }
 
@@ -488,16 +503,16 @@ inline static void free__(char* ptr) {
 //
 //  output pixel data
 //
-static void output_pixel(int left, int top, int width, int height, unsigned char* buffer, int buffer_size, unsigned short* palette) {
+static void output_pixel(int left, int top, int width, int height, unsigned char* buffer, int buffer_size, unsigned short* palette, int transparent_index) {
 
   unsigned char* buffer_end = buffer + buffer_size;
   unsigned short* gvram = (unsigned short*)GVRAM + g_actual_width * (g_start_y + top) + (g_start_x + left);
   int x = 0;
-  int y = top;
+  int y = 0;
   int ssp;
 
 #ifdef DEBUG
-//  printf("left=%d,top=%d,width=%d,height=%d\n",left,top,width,height);
+  printf("left=%d,top=%d,width=%d,height=%d,trans=%d\n",left,top,width,height,transparent_index);
 #endif
 
   // supervisor mode
@@ -508,8 +523,11 @@ static void output_pixel(int left, int top, int width, int height, unsigned char
     unsigned char palette_code = *buffer++;
     
     if ((g_start_x + left + x) < g_actual_width) {
-//      printf("x=%d,y=%d,palette=%d,color=%06X\n",x,y,palette_code,palette[palette_code]);
-      *gvram++ = palette[ palette_code ];
+      if (transparent_index < 0 || palette_code != transparent_index) {
+        *gvram++ = palette[ palette_code ];
+      } else {
+        gvram++;
+      }
     }
     
     // next pixel
@@ -519,13 +537,13 @@ static void output_pixel(int left, int top, int width, int height, unsigned char
     if (x >= width) {
       x = 0;
       if (++y >= height) break;
-      if ((g_start_y + y) >= g_actual_height) break;  // Y cropping
-      gvram = (unsigned short*)GVRAM + g_actual_width * (g_start_y + y) + (g_start_x + left);
+      if ((g_start_y + top + y) >= g_actual_height) break;  // Y cropping
+      gvram = (unsigned short*)GVRAM + g_actual_width * (g_start_y + top + y) + (g_start_x + left);
     }
 
   }
 
-  SUPER(ssp);
+  //SUPER(ssp);
 
 }
 
@@ -534,15 +552,41 @@ static void output_pixel(int left, int top, int width, int height, unsigned char
 //
 static int load_gif_image(char* gif_file_name) {
 
+    // for GIF file parsing
+    GIF_HEADER header;
+    int end_of_gif = 0;
+
+    // for file read access
     struct FILBUF inf;
     FILE* fp;
     int read_size;
+
+    // for file content buffering
     unsigned char* file_buffer_ptr = NULL;
-    unsigned char* decode_buffer_ptr = NULL;
     int file_buffer_ofs = 0;
-    GIF_HEADER header;
-    int end_of_gif = 0;
+    
+    // for lzw decoding (normal mode)
+    unsigned char* decode_buffer_ptr = NULL;
+
+    // for lzw decoding (memory cache mode)
+    #define MAX_IMAGES 200
+    static unsigned char* decode_buffer_ptrs[MAX_IMAGES];
+    static int decode_buffer_sizes[MAX_IMAGES];
+    static GIF_IMAGE_BLOCK image_blocks[MAX_IMAGES];
+    static GIF_GRAPHIC_CONTROL_EXTENSION graphic_ctrl_exts[MAX_IMAGES];
+    static unsigned short local_palettes[MAX_IMAGES][256];
+    static int transparent_color_indexes[MAX_IMAGES];
+    static int delay_times[MAX_IMAGES];
+    int image_index = 0;
+
+    // global palette
     static unsigned short global_palette[256];
+ 
+    // delay time
+    int delay_time = 0;
+
+    // transparency
+    int transparent_color_index;
 
     // check file status
     if (FILES(&inf,gif_file_name,0x23) != 0) {
@@ -601,9 +645,9 @@ static int load_gif_image(char* gif_file_name) {
     header.bg_color_index = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
     header.aspect_ratio   = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
 
-    // read global color table
+    // global color table
     if (read_bits(header.flag_code,7,1)) {
-      int gct_size = (1 << (1 + read_bits(header.flag_code,0,3)));
+      int gct_size = 1 << (1 + read_bits(header.flag_code,0,3));
       for (int i = 0; i < gct_size; i++) {
         unsigned char r = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
         unsigned char g = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
@@ -615,7 +659,7 @@ static int load_gif_image(char* gif_file_name) {
 #endif
     }
 
-    // allocate decode buffer memory
+    // allocate lzw decode buffer memory
     decode_buffer_ptr = malloc__(g_output_buffer_size);
     if (decode_buffer_ptr == NULL) {
       printf("error: cannot allocate memory for inflate buffer.\n");
@@ -623,12 +667,14 @@ static int load_gif_image(char* gif_file_name) {
       return -1;
     }
 
-    // parse blocks
-    do {
+    // for memory cache mode
+    for (int i = 0; i < MAX_IMAGES; i++) {
+      decode_buffer_ptrs[i] = NULL;
+      decode_buffer_sizes[i] = 0;
+    }
 
-      // transparency information got from graphic extension block
-      int transparent_color_flag = 0;
-      int transparent_color_index;
+    // parse data blocks
+    do {
 
       // read first byte to identify block type
       unsigned char block_type = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
@@ -645,35 +691,46 @@ static int load_gif_image(char* gif_file_name) {
       } else if (block_type == IMAGE_SEPARATOR) {
         
         // GIF image block
-        GIF_IMAGE_BLOCK image_block;
+        GIF_IMAGE_BLOCK* image_block = &image_blocks[image_index];
         int end_of_image = 0;
-        unsigned short local_palette[256];
+
+        // local palette
+        static unsigned short local_palette[256];
         int use_local_palette = 0;
 
-        image_block.separator = block_type;
+        // for lzw decode
+        LZW_INF lzw;
+        static unsigned char sub_block_data[256];
+        int pixel_count;
+        int decode_buffer_ofs = 0;
+        char* sub_block_data2 = NULL;
+        int sub_block_ofs2 = 0;
 
-        image_block.left_position = get_ushort_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
-        image_block.top_position  = get_ushort_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
-        image_block.width         = get_ushort_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
-        image_block.height        = get_ushort_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
-        image_block.flag_code     = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
+        // image block header fields
+        image_block->separator     = block_type;
+        image_block->left_position = get_ushort_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
+        image_block->top_position  = get_ushort_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
+        image_block->width         = get_ushort_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
+        image_block->height        = get_ushort_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
+        image_block->flag_code     = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
 
 #ifdef DEBUG
         printf("image block - left:%d,top:%d,width:%d,height:%d\n",
-              image_block.left_position,
-              image_block.top_position,
-              image_block.width,
-              image_block.height);        
+              image_block->left_position,
+              image_block->top_position,
+              image_block->width,
+              image_block->height);        
 #endif
 
-        // read local color table
-        if ((use_local_palette = read_bits(image_block.flag_code,7,1)) != 0) {
-          int lct_size = 1 << (1 + (read_bits(image_block.flag_code,0,3)));
+        // local color table
+        if ((use_local_palette = read_bits(image_block->flag_code,7,1)) != 0) {
+          int lct_size = 1 << (1 + (read_bits(image_block->flag_code,0,3)));
           for (int i = 0; i < lct_size; i++) {
             unsigned char r = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
             unsigned char g = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
             unsigned char b = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
-            local_palette[i] = g_rgb555_r[ r ] | g_rgb555_g[ g ] | g_rgb555_b[ b ];
+            local_palette[i] = g_rgb555_r[ r ] + g_rgb555_g[ g ] + g_rgb555_b[ b ];
+            local_palettes[image_index][i] = g_rgb555_r[ r ] + g_rgb555_g[ g ] + g_rgb555_b[ b ];
           }
 #ifdef DEBUG
           printf("loaded local palette. (%d colors)\n",lct_size);
@@ -681,47 +738,86 @@ static int load_gif_image(char* gif_file_name) {
         }
 
         // read lzw minimum code size
-        image_block.lzw_min_code_size = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
+        image_block->lzw_min_code_size = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
 #ifdef DEBUG
-        printf("lzw min code size=%d\n",image_block.lzw_min_code_size);
+        printf("lzw min code size=%d\n",image_block->lzw_min_code_size);
 #endif
 
-        int pixel_count = image_block.width * image_block.height;
-        LZW_INF lzw;
-        static unsigned char sub_block_data[256];
-        int decode_buffer_ofs = 0;
+        // total number of pixels
+        pixel_count = image_block->width * image_block->height;
 
-        initialize_lzw(&lzw, image_block.lzw_min_code_size);
+        // initialize lzw decode state
+        initialize_lzw(&lzw, image_block->lzw_min_code_size);
 
-        // repeat to read sub block size and image data
+        sub_block_data2 = malloc__(1024*1024);
+
+        // read sub blocks
         do {
 
           unsigned char sub_block_size = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
+
           if (sub_block_size == 0) {
             end_of_image = 1;
           } else {
-            int decoded;
-            memcpy_file_buffer(sub_block_data, file_buffer_ptr, &file_buffer_ofs, sub_block_size, fp);
-            decoded = decode_lzw(&lzw, sub_block_data, sub_block_size, decode_buffer_ptr + decode_buffer_ofs, pixel_count - decode_buffer_ofs);
-            decode_buffer_ofs += decoded;
+//            int decoded;
+//            memcpy_file_buffer(sub_block_data, file_buffer_ptr, &file_buffer_ofs, sub_block_size, fp);
+//            decoded = decode_lzw(&lzw, sub_block_data, sub_block_size, decode_buffer_ptr + decode_buffer_ofs, pixel_count - decode_buffer_ofs);
+//#ifdef DEBUG
+//            printf("memcpy done. decoded=%d\n",decoded);
+//            for (int i = 0; i < decoded; i++) {
+//              printf("ofs=%d,pallet=%d\n",decode_buffer_ofs+i,decode_buffer_ptr[decode_buffer_ofs+i]);
+//            }
+//#endif
+//            decode_buffer_ofs += decoded;
+            memcpy_file_buffer(sub_block_data2 + sub_block_ofs2, file_buffer_ptr, &file_buffer_ofs, sub_block_size, fp);
+            sub_block_ofs2 += sub_block_size;
           }
 
         } while (end_of_image == 0);
 
-#ifdef DEBUG
-        printf("decode_buffer_ofs = %d\n",decode_buffer_ofs);
-#endif
+        decode_buffer_ofs = decode_lzw(&lzw,sub_block_data2,sub_block_ofs2,decode_buffer_ptr,pixel_count);
 
-        // image block does not have terminator
+        if (g_memory_cache_mode) {
 
-        // output pixel
-        output_pixel(image_block.left_position, 
-                     image_block.top_position, 
-                     image_block.width, 
-                     image_block.height,
-                     decode_buffer_ptr,
-                     decode_buffer_ofs,
-                     use_local_palette ? local_palette : global_palette );
+          int size = decode_buffer_ofs;
+          decode_buffer_sizes[image_index] = size;
+          if ((decode_buffer_ptrs[image_index] = malloc__(size)) == NULL) {
+            printf("error: memory allocation failure.\n");
+            end_of_image = 1;
+            end_of_gif = 1;
+            break;
+          }
+          memcpy(decode_buffer_ptrs[image_index],decode_buffer_ptr,size);
+
+        } else {
+
+  #ifdef DEBUG
+          printf("decode_buffer_ofs = %d\n",decode_buffer_ofs);
+  #endif
+
+          // image block does not have terminator
+
+          // output pixel
+          output_pixel(image_block->left_position, 
+                      image_block->top_position, 
+                      image_block->width, 
+                      image_block->height,
+                      decode_buffer_ptr,
+                      decode_buffer_ofs,
+                      use_local_palette != 0 ? local_palette : global_palette,
+                      transparent_color_index);
+
+        }
+
+        free__(sub_block_data2);
+
+        printf("decoded frame %d\n",image_index);
+        image_index++;
+
+        if (image_index >= MAX_IMAGES) {
+          end_of_gif = 1;
+          break;
+        }
 
       } else if (block_type == EXTENSION_INTRODUCER) {
 
@@ -734,24 +830,30 @@ static int load_gif_image(char* gif_file_name) {
 #ifdef DEBUG 
           printf("graphic control extension\n");
 #endif
-          graphic_ctrl_ext.introducer = block_type;
-          graphic_ctrl_ext.label = extension_label;
+
+          // graphic control extension header fields
+          graphic_ctrl_ext.introducer  = block_type;
+          graphic_ctrl_ext.label       = extension_label;
 
           graphic_ctrl_ext.block_size        = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
           graphic_ctrl_ext.flag_code         = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
           graphic_ctrl_ext.delay_time        = get_ushort_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
           graphic_ctrl_ext.transparent_index = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
 
+          // block terminator check
           graphic_ctrl_ext.terminator = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
           if (graphic_ctrl_ext.terminator != 0x00) {
-            printf("error: extension read error.\n");
+            printf("error: graphic control extension read error.\n");
             end_of_gif = 1;
             break;            
           }
 
-          // capture transparency information for the next image block use
-          transparent_color_flag  = graphic_ctrl_ext.flag_code & 0x01;
-          transparent_color_index = graphic_ctrl_ext.transparent_index;
+          // capture delay time and transparency information for the next image block use
+          delay_time = graphic_ctrl_ext.delay_time;
+          transparent_color_index = (graphic_ctrl_ext.flag_code & 0x01) ? graphic_ctrl_ext.transparent_index : -1;
+
+          delay_times[image_index] = delay_time;
+          transparent_color_indexes[image_index] = transparent_color_index;
 
         } else if (extension_label == COMMENT_LABEL) {
 
@@ -760,15 +862,18 @@ static int load_gif_image(char* gif_file_name) {
 #ifdef DEBUG 
           printf("comment extension\n");
 #endif
+
+          // comment extension header fields
           comment_ext.introducer = block_type;
-          comment_ext.label = extension_label;
+          comment_ext.label      = extension_label;
 
           comment_ext.block_size = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
           skip_file_buffer(file_buffer_ptr, &file_buffer_ofs, comment_ext.block_size, fp);
 
+          // terminator check
           comment_ext.terminator = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
           if (comment_ext.terminator != 0x00) {
-            printf("error: extension read error.\n");
+            printf("error: comment extension read error.\n");
             end_of_gif = 1;
             break;            
           }
@@ -780,8 +885,10 @@ static int load_gif_image(char* gif_file_name) {
 #ifdef DEBUG 
           printf("plain text extension\n");
 #endif
+
+          // plain text extension header fields
           plain_text_ext.introducer = block_type;
-          plain_text_ext.label = extension_label;
+          plain_text_ext.label      = extension_label;
 
           plain_text_ext.block_size              = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
           plain_text_ext.text_grid_left_position = get_ushort_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
@@ -796,7 +903,7 @@ static int load_gif_image(char* gif_file_name) {
 
           plain_text_ext.terminator = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
           if (plain_text_ext.terminator != 0x00) {
-            printf("error: extension read error.\n");
+            printf("error: plain text extension read error.\n");
             end_of_gif = 1;
             break;            
           }
@@ -821,7 +928,7 @@ static int load_gif_image(char* gif_file_name) {
 
           app_ext.terminator = get_uchar_file_buffer(file_buffer_ptr, &file_buffer_ofs, fp);
           if (app_ext.terminator != 0x00) {
-            printf("error: extension read error.\n");
+            printf("error: application extension read error.\n");
             end_of_gif = 1;
             break;            
           }
@@ -843,6 +950,25 @@ static int load_gif_image(char* gif_file_name) {
       }
 
     } while (end_of_gif == 0);
+
+    if (g_memory_cache_mode) {
+
+      for (int i = 0; i < image_index; i++) {
+
+        // output pixel
+        output_pixel(image_blocks[i].left_position, 
+                     image_blocks[i].top_position, 
+                     image_blocks[i].width, 
+                     image_blocks[i].height,
+                     decode_buffer_ptrs[i],
+                     decode_buffer_sizes[i],
+                     local_palettes[i] != NULL ? local_palettes[i] : global_palette,
+                     transparent_color_indexes[i]);
+
+        free__(decode_buffer_ptrs[i]);
+
+      }
+    }
 
     // reclaim decode buffer memory
     if (decode_buffer_ptr != NULL) {
@@ -870,12 +996,17 @@ static int load_gif_image(char* gif_file_name) {
 //
 static int describe_gif_image(char* gif_file_name) {
 
+    // for GIF file parsing
+    GIF_HEADER header;
+
+    // for file read access
     struct FILBUF inf;
     FILE* fp;
     int read_size;
+
+    // for file buffering
     char* file_buffer_ptr = NULL;
     int file_buffer_ofs = 0;
-    GIF_HEADER header;
 
     // check file status
     if (FILES(&inf,gif_file_name,0x23) != 0) {
@@ -977,6 +1108,7 @@ static void show_help_message() {
   printf("   -i ... show file information\n");
   printf("   -n ... image centering\n");
   printf("   -k ... wait key input\n");
+  printf("   -o<x,y> ... display position\n");
   printf("   -v<n> ... brightness (0-100)\n");
   printf("   -b<n> ... buffer memory size factor[1-16] (default:8)\n");
 }
@@ -1006,8 +1138,21 @@ int main(int argc, char* argv[]) {
         g_centering_mode = 1;
       } else if (argv[i][1] == 'k') {
         g_wait_mode = 1;
+      } else if (argv[i][1] == 'm') {
+        g_memory_cache_mode = 1;
       } else if (argv[i][1] == 'v') {
         g_brightness = atoi(argv[i]+2);
+      } else if (argv[i][1] == 'o') {
+        static char opt[64];
+        strcpy(opt,argv[i]+2);
+        char* c = strchr(opt,',');
+        if (c != NULL) {
+          *c = '\0';
+          g_start_x = atoi(opt);
+          g_start_y = atoi(c+1);
+        } else {
+          g_start_x = atoi(opt);
+        }
       } else if (argv[i][1] == 'b') {
         g_buffer_memory_size_factor = atoi(argv[i]+2);
         if (g_buffer_memory_size_factor > 16) {
@@ -1030,6 +1175,20 @@ int main(int argc, char* argv[]) {
     printf("error: no input file.\n");
     return 1;
   }
+
+/*
+  LZW_INF lzw;
+  //unsigned char input[] = { 0x84, 0x03, 0x81, 0x51 };
+  unsigned char input[] = { 0x44, 0x8c, 0x57 };
+  unsigned char output[9];
+  initialize_lzw(&lzw,2);
+  int decoded = decode_lzw(&lzw, input, 3, output, 9);
+  printf("decoded=%d\n",decoded);
+  for (int i = 0; i < 9; i++) {
+    printf("output[%d]=%d\n",i,output[i]);
+  }
+  return 0;
+*/
 
   // input buffer = 64KB * factor
   g_input_buffer_size = 65536 * g_buffer_memory_size_factor;
