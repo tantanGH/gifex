@@ -1,5 +1,4 @@
 _build/gifex.o
-_build/lzw.o
 _build/CLIB.L
 _build/DOSLIB.L
 _build/IOCSLIB.L

@@ -32,7 +32,7 @@ CFLAGS = $(COMMON_FLAGS) -Wno-builtin-declaration-mismatch -fcall-used-d2 -fcall
 	-D__XDEV68K__
 
 # *.c ソースファイル
-C_SRCS = gifex.c lzw.c
+C_SRCS = gifex.c
 
 # *.s ソースファイル
 ASM_SRCS = 
