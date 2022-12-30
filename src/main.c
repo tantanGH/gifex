@@ -20,7 +20,7 @@
 #include "lzw.h"
 #include "gif.h"
 
-#define VERSION "0.2.0"
+#define VERSION "0.3.0"
 //#define DEBUG
 
 // global variables (flags)
@@ -55,11 +55,6 @@ unsigned short g_global_color_table[256];
 GIF_IMAGE_FRAME g_image_frames[ MAX_IMAGE_FRAMES ];
 int g_max_frame_index = 0;
 volatile int g_current_frame_index = 0;
-volatile int g_vdisp_count = 0;
-
-// display screen size
-#define SCREEN_WIDTH  768
-#define SCREEN_HEIGHT 512
 
 // actual screen size
 #define ACTUAL_WIDTH_EX  1024
@@ -91,20 +86,24 @@ static void initialize_color_mapping() {
 //
 void output_image(GIF_IMAGE_FRAME* image_frame) {
   
-  GIF_IMAGE_BLOCK* image_block = &image_frame->image_block;
+  // image frame attributes
   unsigned char* buffer = image_frame->frame_data_ptr;
   unsigned char* buffer_end = buffer + image_frame->frame_data_size;
- 
+  unsigned short* global_palette = image_frame->global_color_table_ptr;
+  
+  // image block attributes
+  GIF_IMAGE_BLOCK* image_block = &image_frame->image_block;
   int width = image_block->width, height = image_block->height;
   int offset_x = g_start_x + image_block->left_position;
   int offset_y = g_start_y + image_block->top_position;
   int x = 0, y = 0;
-
-  GIF_GRAPHIC_CONTROL_EXTENSION* graphic_ctrl_ext = &image_frame->graphic_ctrl_ext;
-  int transparent_index = (graphic_ctrl_ext->flag_code & 0x01) ? graphic_ctrl_ext->transparent_index : -1;
-  unsigned short* global_palette = image_frame->global_color_table_ptr;
   unsigned short* palette = (image_block->flag_code & 0x01) ? image_frame->local_color_table : global_palette;
 
+  // graphic control extension attributes
+  GIF_GRAPHIC_CONTROL_EXTENSION* graphic_ctrl_ext = &image_frame->graphic_ctrl_ext;
+  int transparent_index = (graphic_ctrl_ext->flag_code & 0x01) ? graphic_ctrl_ext->transparent_index : -1;
+  
+  // gvram entry point
   unsigned short* gvram = (unsigned short*)GVRAM + g_actual_width * offset_y + offset_x;
  
   while (buffer < buffer_end) {
@@ -140,14 +139,10 @@ void output_image(GIF_IMAGE_FRAME* image_frame) {
 //  output image data to graphic vram (vdisp handler)
 //
 void __attribute__((interrupt)) output_image_vdisp() {
-//  g_vdisp_count++;
-//  if ((g_vdisp_count % 2) == 0) {
-    output_image(&g_image_frames[ g_current_frame_index++ ]);
-    if (g_current_frame_index >= g_max_frame_index) {
-      g_current_frame_index = 0;
-    }
-//  }
-//  if (g_vdisp_count >= 1000000) g_vdisp_count = 0;
+  output_image(&g_image_frames[ g_current_frame_index++ ]);
+  if (g_current_frame_index >= g_max_frame_index) {
+    g_current_frame_index = 0;
+  }
 }
 
 //
@@ -419,7 +414,6 @@ static int load_gif_image(char* gif_file_name) {
 #ifdef DEBUG 
           printf("graphic control extension\n");
 #endif
-
           // graphic control extension header fields
           graphic_ctrl_ext->introducer  = block_type;
           graphic_ctrl_ext->label       = extension_label;
@@ -444,7 +438,6 @@ static int load_gif_image(char* gif_file_name) {
 #ifdef DEBUG 
           printf("comment extension\n");
 #endif
-
           // comment extension header fields
           comment_ext.introducer = block_type;
           comment_ext.label      = extension_label;
@@ -467,7 +460,6 @@ static int load_gif_image(char* gif_file_name) {
 #ifdef DEBUG 
           printf("plain text extension\n");
 #endif
-
           // plain text extension header fields
           plain_text_ext.introducer = block_type;
           plain_text_ext.label      = extension_label;
@@ -497,6 +489,7 @@ static int load_gif_image(char* gif_file_name) {
 #ifdef DEBUG 
           printf("application extension\n");
 #endif
+          // application extension header fields
           app_ext.introducer = block_type;
           app_ext.label = extension_label;
 
@@ -533,40 +526,23 @@ static int load_gif_image(char* gif_file_name) {
 
     } while (end_of_gif == 0);
 
+    // if memory cache mode, play animation here using vsync interrupt
     if (g_memory_cache_mode) {
 
       volatile unsigned char* gpip = (unsigned char*)GPIP;
 
       g_max_frame_index = image_frame_index;
       g_current_frame_index = 0;
-//      g_vdisp_count = 0;
 
-	    //initVsyncInterrupt(output_image_vdisp);
-
-//	    int current = g_vdisp_count;
-
-//	    while (INPOUT(0xFF) == 0) {
-//		    while (current == g_vdisp_count) {}
-// 	    current = g_vdisp_count;
-//	    }
-
-	    //termVsyncInterrupt();
-
-//      for (int i = 0; i < image_frame_index; i++) {
-//        while( (*gpip & 0x10));
-//        while( (*gpip & 0x10));
-//        output_image(&g_image_frames[i]);
-//      }
-
-      while( (*gpip & 0x10));     // wait while V-DISP is H
-      while(!(*gpip & 0x10));     // wait while V-DISP is L
+      WAIT_VBLANK;
+      WAIT_VSYNC;
 
       if (VDISPST((unsigned char*)output_image_vdisp, 0, 2) == 0) {
 
         getchar();
 
-        while( (*gpip & 0x10));     // wait while V-DISP is H
-        while(!(*gpip & 0x10));     // wait while V-DISP is L
+        WAIT_VBLANK;
+        WAIT_VSYNC;
 
         VDISPST(0, 0, 0);
 
@@ -574,8 +550,8 @@ static int load_gif_image(char* gif_file_name) {
         printf("error: cannot use vsync interrupt.\n");
       }
 
-      while(!(*gpip & 0x10));     // wait while V-DISP is L
-      while( (*gpip & 0x10));     // wait while V-DISP is H
+      WAIT_VSYNC;
+      WAIT_VBLANK;
 
     }
 
