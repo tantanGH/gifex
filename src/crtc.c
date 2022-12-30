@@ -3,7 +3,7 @@
 //
 //  initialize screen
 //
-void initialize_screen(int mode) {
+int initialize_screen(int mode) {
 
   // crtc, video controller and palette
   volatile unsigned short* crtc_r00_ptr = (unsigned short*)CRTC_R00;
@@ -11,20 +11,25 @@ void initialize_screen(int mode) {
   volatile unsigned short* crtc_r20_ptr = (unsigned short*)CRTC_R20;
   volatile unsigned short* vdc_r1_ptr   = (unsigned short*)VDC_R1;
   volatile unsigned short* vdc_r2_ptr   = (unsigned short*)VDC_R2;
-  volatile unsigned char* gpip = (unsigned char*)GPIP;
   volatile unsigned char* sysp = (unsigned char*)SYSP;
   volatile unsigned char* scon = (unsigned char*)SCON;
+  int current_resolution;
 
-  // wait vdisp
-  while(!(*gpip & 0x10));
-  while( (*gpip & 0x10));
+  // return code
+  int rc = -1;
+
+  // wait vblank
+  WAIT_VSYNC;
+  WAIT_VBLANK;
 
   // change CRTC screen mode
-  if (mode == 0) {
+  switch (mode) {
+    
+    case SCREEN_MODE_384x256:
 
-    // 512x256(384x256),31kHz,65536 colors
-    int current_resolution = crtc_r20_ptr[0] & 0x013;
-    if (current_resolution > 0x11) {
+      // 512x256(384x256),31kHz,65536 colors
+      current_resolution = crtc_r20_ptr[0] & 0x013;
+      if (current_resolution > 0x11) {
         crtc_r20_ptr[0] = 0x311;    // set first
         crtc_r00_ptr[1] = 0x0006;
         crtc_r00_ptr[2] = 0x000b;
@@ -35,7 +40,7 @@ void initialize_screen(int mode) {
         crtc_r00_ptr[7] = 0x0228; 
         crtc_r00_ptr[8] = 0x001b;
         crtc_r00_ptr[0] = 0x0045;   // set last
-    } else {
+      } else {
         crtc_r00_ptr[0] = 0x0045;   // set first
         crtc_r00_ptr[1] = 0x0006;
         crtc_r00_ptr[2] = 0x000b;
@@ -46,84 +51,142 @@ void initialize_screen(int mode) {
         crtc_r00_ptr[7] = 0x0228; 
         crtc_r00_ptr[8] = 0x001b;
         crtc_r20_ptr[0] = 0x311;    // set last
-    }
+      }
 
-    sysp[0] |= 0x02;                // system port for dot clock change - Inside/Out p44
+      sysp[0] |= 0x02;              // system port for dot clock change - Inside/Out p44
 
-    vdc_r1_ptr[0]   = 3;          // memory mode 3
+      vdc_r1_ptr[0] = 3;            // memory mode 3
 
-    scon[1] = 0x000b + 4;
-    for (int i = 0; i < 0x1000; i++);       // ;_;
-    scon[0] = 0xff;
-    scon[2] = 0x28;
-    scon[3] = 0x11;
+      scon[1] = 0x000b + 4;         // R02 + 4
 
-    vdc_r2_ptr[0]   = 0x2f;       // graphic on (512x256)
+      WAIT_SCON;
+      scon[0] = 0xff;               // 256 color mode: R00  else: 0xff
+      scon[2] = 0x28;               // R06
+      scon[3] = 0x11;               // R20 & 0xff
 
-    crtc_r12_ptr[0] = 0;          // scroll position X
-    crtc_r12_ptr[1] = 0;          // scroll position Y
-    crtc_r12_ptr[2] = 0;          // scroll position X
-    crtc_r12_ptr[3] = 0;          // scroll position Y    
-    crtc_r12_ptr[4] = 0;          // scroll position X
-    crtc_r12_ptr[5] = 0;          // scroll position Y
-    crtc_r12_ptr[6] = 0;          // scroll position X
-    crtc_r12_ptr[7] = 0;          // scroll position Y
+      vdc_r2_ptr[0] = 0x2f;         // graphic on (w:512 h:256)
 
-  } else if (mode == 1) {
+      crtc_r12_ptr[0] = 0;          // scroll position X
+      crtc_r12_ptr[1] = 0;          // scroll position Y
+      crtc_r12_ptr[2] = 0;          // scroll position X
+      crtc_r12_ptr[3] = 0;          // scroll position Y    
+      crtc_r12_ptr[4] = 0;          // scroll position X
+      crtc_r12_ptr[5] = 0;          // scroll position Y
+      crtc_r12_ptr[6] = 0;          // scroll position X
+      crtc_r12_ptr[7] = 0;          // scroll position Y
 
-    // 512x512(512x512),31kHz,65536 colors
-    
-    int current_resolution = crtc_r20_ptr[0] & 0x013;
-    if (current_resolution > 0x15) {
-      crtc_r20_ptr[0] = 0x315;      // set last
-      crtc_r00_ptr[1] = 0x0009;
-      crtc_r00_ptr[2] = 0x0011;
-      crtc_r00_ptr[3] = 0x0051; 
-      crtc_r00_ptr[4] = 0x0237;
-      crtc_r00_ptr[5] = 0x0005;
-      crtc_r00_ptr[6] = 0x0028;
-      crtc_r00_ptr[7] = 0x0228; 
-      crtc_r00_ptr[8] = 0x001b;
-      crtc_r00_ptr[0] = 0x005b;     // set last
-    } else {
-      crtc_r00_ptr[0] = 0x005b;     // set first
-      crtc_r00_ptr[1] = 0x0009;
-      crtc_r00_ptr[2] = 0x0011;
-      crtc_r00_ptr[3] = 0x0051; 
-      crtc_r00_ptr[4] = 0x0237;
-      crtc_r00_ptr[5] = 0x0005;
-      crtc_r00_ptr[6] = 0x0028;
-      crtc_r00_ptr[7] = 0x0228; 
-      crtc_r20_ptr[0] = 0x0315;     // set last, memory mode 3
-    }
+      rc = 0;
+      break;
 
-    sysp[0] |= 0x02;                // system port for dot clock change - Inside/Out p44
+    case SCREEN_MODE_512x512:
 
-    vdc_r1_ptr[0]   = 3;          // memory mode 3
+      // 512x512(512x512),31kHz,65536 colors
+      current_resolution = crtc_r20_ptr[0] & 0x013;
+      if (current_resolution > 0x15) {
+        crtc_r20_ptr[0] = 0x315;      // set last
+        crtc_r00_ptr[1] = 0x0009;
+        crtc_r00_ptr[2] = 0x0011;
+        crtc_r00_ptr[3] = 0x0051; 
+        crtc_r00_ptr[4] = 0x0237;
+        crtc_r00_ptr[5] = 0x0005;
+        crtc_r00_ptr[6] = 0x0028;
+        crtc_r00_ptr[7] = 0x0228; 
+        crtc_r00_ptr[8] = 0x001b;
+        crtc_r00_ptr[0] = 0x005b;     // set last
+      } else {
+        crtc_r00_ptr[0] = 0x005b;     // set first
+        crtc_r00_ptr[1] = 0x0009;
+        crtc_r00_ptr[2] = 0x0011;
+        crtc_r00_ptr[3] = 0x0051; 
+        crtc_r00_ptr[4] = 0x0237;
+        crtc_r00_ptr[5] = 0x0005;
+        crtc_r00_ptr[6] = 0x0028;
+        crtc_r00_ptr[7] = 0x0228; 
+        crtc_r20_ptr[0] = 0x0315;     // set last, memory mode 3
+      }
 
-    scon[1] = 0x000b + 4;
-    for (int i = 0; i < 0x1000; i++);       // ;_;
-    scon[0] = 0xff;
-    scon[2] = 0x28;
-    scon[3] = 0x11;
+//      sysp[0] |= 0x02;                // system port for dot clock change - Inside/Out p44
 
-    vdc_r2_ptr[0]   = 0x2f;       // graphic on (512x256)
+      vdc_r1_ptr[0] = 3;              // memory mode 3
 
-    crtc_r12_ptr[0] = 0;          // scroll position X
-    crtc_r12_ptr[1] = 0;          // scroll position Y
-    crtc_r12_ptr[2] = 0;          // scroll position X
-    crtc_r12_ptr[3] = 0;          // scroll position Y    
-    crtc_r12_ptr[4] = 0;          // scroll position X
-    crtc_r12_ptr[5] = 0;          // scroll position Y
-    crtc_r12_ptr[6] = 0;          // scroll position X
-    crtc_r12_ptr[7] = 0;          // scroll position Y
+//      scon[1] = 0x0011 + 4;           // R02 + 4
+
+//      WAIT_SCON;
+//      scon[0] = 0xff;                 // 256 color: R00  else: 0xff
+//      scon[2] = 0x28;                 // R06
+//      scon[3] = 0x15;                 // R20 & 0xff
+
+      vdc_r2_ptr[0] = 0x2f;           // graphic on (w:512 h:512)
+
+      crtc_r12_ptr[0] = 0;            // scroll position X
+      crtc_r12_ptr[1] = 0;            // scroll position Y
+      crtc_r12_ptr[2] = 0;            // scroll position X
+      crtc_r12_ptr[3] = 0;            // scroll position Y    
+      crtc_r12_ptr[4] = 0;            // scroll position X
+      crtc_r12_ptr[5] = 0;            // scroll position Y
+      crtc_r12_ptr[6] = 0;            // scroll position X
+      crtc_r12_ptr[7] = 0;            // scroll position Y
   
-  } else if (mode == 2) {
+      rc = 0;
+      break;
 
-    // 512x512(768x512),31kHz,65536 colros
-    int current_resolution = crtc_r20_ptr[0] & 0x013;
-    if (current_resolution > 0x16) {
-      crtc_r20_ptr[0] = 0x316;      // set first
+    case SCREEN_MODE_768x512:
+
+      // 512x512(768x512),31kHz,65536 colros
+      int current_resolution = crtc_r20_ptr[0] & 0x013;
+      if (current_resolution > 0x16) {
+        crtc_r20_ptr[0] = 0x316;      // set first
+        crtc_r00_ptr[1] = 0x000e;
+        crtc_r00_ptr[2] = 0x001c;
+        crtc_r00_ptr[3] = 0x007c; 
+        crtc_r00_ptr[4] = 0x0237;
+        crtc_r00_ptr[5] = 0x0005;
+        crtc_r00_ptr[6] = 0x0028;
+        crtc_r00_ptr[7] = 0x0228; 
+        crtc_r00_ptr[8] = 0x001b;
+        crtc_r00_ptr[0] = 0x0089;     // set last
+      } else {
+        crtc_r00_ptr[0] = 0x0089;     // set first
+        crtc_r00_ptr[1] = 0x000e;
+        crtc_r00_ptr[2] = 0x001c;
+        crtc_r00_ptr[3] = 0x007c; 
+        crtc_r00_ptr[4] = 0x0237;
+        crtc_r00_ptr[5] = 0x0005;
+        crtc_r00_ptr[6] = 0x0028;
+        crtc_r00_ptr[7] = 0x0228; 
+        crtc_r00_ptr[8] = 0x001b;    
+        crtc_r20_ptr[0] = 0x0316;     // set last, memory mode 3
+      }
+
+//      sysp[0] |= 0x02;                // system port for dot clock change - Inside/Out p44
+
+      vdc_r1_ptr[0] = 3;              // memory mode 3
+
+//      scon[1] = 0x001c + 4;
+
+//      WAIT_SCON;
+//      scon[0] = 0xff;                 // 256 color: R00  else: 0xff
+//      scon[2] = 0x28;                 // R06
+//      scon[3] = 0x16;                 // R20 & 0xff
+
+      vdc_r2_ptr[0] = 0x2f;           // graphic on (w:512 h:512)
+
+      crtc_r12_ptr[0] = 0;            // scroll position X
+      crtc_r12_ptr[1] = 0;            // scroll position Y
+      crtc_r12_ptr[2] = 0;            // scroll position X
+      crtc_r12_ptr[3] = 0;            // scroll position Y    
+      crtc_r12_ptr[4] = 0;            // scroll position X
+      crtc_r12_ptr[5] = 0;            // scroll position Y
+      crtc_r12_ptr[6] = 0;            // scroll position X
+      crtc_r12_ptr[7] = 0;            // scroll position Y
+
+      rc = 0;
+      break;
+
+    case SCREEN_MODE_768x512_FULL:
+
+      // 1024x1024(768x512),31kHz,65536 colros (for XEiJ only)
+      crtc_r00_ptr[0] = 0x0089;
       crtc_r00_ptr[1] = 0x000e;
       crtc_r00_ptr[2] = 0x001c;
       crtc_r00_ptr[3] = 0x007c; 
@@ -132,82 +195,58 @@ void initialize_screen(int mode) {
       crtc_r00_ptr[6] = 0x0028;
       crtc_r00_ptr[7] = 0x0228; 
       crtc_r00_ptr[8] = 0x001b;
-      crtc_r00_ptr[0] = 0x0089;     // set last
-    } else {
-      crtc_r00_ptr[0] = 0x0089;     // set first
-      crtc_r00_ptr[1] = 0x000e;
-      crtc_r00_ptr[2] = 0x001c;
-      crtc_r00_ptr[3] = 0x007c; 
-      crtc_r00_ptr[4] = 0x0237;
-      crtc_r00_ptr[5] = 0x0005;
-      crtc_r00_ptr[6] = 0x0028;
-      crtc_r00_ptr[7] = 0x0228; 
-      crtc_r00_ptr[8] = 0x001b;    
-      crtc_r20_ptr[0] = 0x0316;     // set last, memory mode 3
-    }
 
-    sysp[0] |= 0x02;                // system port for dot clock change - Inside/Out p44
+      crtc_r20_ptr[0] = 0x0716;       // memory mode 7 (for XEiJ only)
 
-    vdc_r1_ptr[0] = 3;            // memory mode 3
+//      sysp[0] |= 0x02;                // system port for dot clock change - Inside/Out p44
 
-    scon[1] = 0x000b + 4;
-    for (int i = 0; i < 0x1000; i++);       // ;_;
-    scon[0] = 0xff;
-    scon[2] = 0x28;
-    scon[3] = 0x11;
+      vdc_r1_ptr[0] = 7;              // memory mode 7 (for XEiJ only)
+  
+//      scon[1] = 0x001c + 4;           // R02 + 0x04
 
-    vdc_r2_ptr[0] = 0x2f;         // graphic on (512x512)
+//      WAIT_SCON;
+//      scon[0] = 0xff;                 // 256 color: R00  else: 0xff
+//      scon[2] = 0x28;                 // R06
+//      scon[3] = 0x16;                 // R20 & 0xff
 
-    crtc_r12_ptr[0] = 0;          // scroll position X
-    crtc_r12_ptr[1] = 0;          // scroll position Y
-    crtc_r12_ptr[2] = 0;          // scroll position X
-    crtc_r12_ptr[3] = 0;          // scroll position Y    
-    crtc_r12_ptr[4] = 0;          // scroll position X
-    crtc_r12_ptr[5] = 0;          // scroll position Y
-    crtc_r12_ptr[6] = 0;          // scroll position X
-    crtc_r12_ptr[7] = 0;          // scroll position Y
+      vdc_r2_ptr[0] = 0x30;           // graphic on (w:1024 h:1024)
 
-  } else if (mode == 3) {
+      crtc_r12_ptr[0] = 0;            // scroll position X
+      crtc_r12_ptr[1] = 0;            // scroll position Y
 
-    // 1024x1024(768x512),31kHz,65536 colros (for XEiJ only)
-    crtc_r00_ptr[0] = 0x0089;
-    crtc_r00_ptr[1] = 0x000e;
-    crtc_r00_ptr[2] = 0x001c;
-    crtc_r00_ptr[3] = 0x007c; 
-    crtc_r00_ptr[4] = 0x0237;
-    crtc_r00_ptr[5] = 0x0005;
-    crtc_r00_ptr[6] = 0x0028;
-    crtc_r00_ptr[7] = 0x0228; 
-    crtc_r00_ptr[8] = 0x001b;
+      rc = 0;
+      break;
 
-    crtc_r20_ptr[0] = 0x0716;       // memory mode 7 (for XEiJ only)
+    default:
 
-    sysp[0] |= 0x02;                // system port for dot clock change - Inside/Out p44
+      // unknown mode
+      break;
 
-    vdc_r1_ptr[0]   = 7;            // memory mode 7 (for XEiJ only)
- 
-    scon[1] = 0x000b + 4;
-    for (int i = 0; i < 0x1000; i++);       // ;_;
-    scon[0] = 0xff;
-    scon[2] = 0x28;
-    scon[3] = 0x11;
-
-    vdc_r2_ptr[0]   = 0x30;         // graphic on (1024x1024)
-
-    crtc_r12_ptr[0] = 0;            // scroll position X
-    crtc_r12_ptr[1] = 0;            // scroll position Y
   }
 
+  return rc;
 }
 
 // initialize 65536 color pallet
-void initialize_palette() {
+int initialize_palette(int mode) {
 
   volatile unsigned short* palette_ptr  = (unsigned short*)PALETTE;
+  int rc = -1;
 
-  for (int i = 0x0001; i <= 0x10000; i += 0x0202) {
-    *palette_ptr++ = (unsigned short)i;
-    *palette_ptr++ = (unsigned short)i;
+  switch (mode) {
+    case SCREEN_MODE_384x256:
+    case SCREEN_MODE_512x512:
+    case SCREEN_MODE_768x512:
+    case SCREEN_MODE_768x512_FULL:
+      for (int i = 0x0001; i <= 0x10000; i += 0x0202) {
+        *palette_ptr++ = (unsigned short)i;
+        *palette_ptr++ = (unsigned short)i;
+      }
+      rc = 0;
+      break;
+    default:
+      break;
   }
-
+    
+  return rc;
 }

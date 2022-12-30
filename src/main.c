@@ -25,7 +25,6 @@
 
 // global variables (flags)
 int g_clear_screen = 0;                 // 1:clear screen by picture
-int g_extended_graphic_mode = 0;        // 1:XEiJ extended graphic mode 7
 int g_information_mode = 0;             // 1:show PNG file information
 int g_centering_mode = 0;               // 1:centering yes
 int g_wait_mode = 0;                    // 1:wait key input
@@ -141,14 +140,14 @@ void output_image(GIF_IMAGE_FRAME* image_frame) {
 //  output image data to graphic vram (vdisp handler)
 //
 void __attribute__((interrupt)) output_image_vdisp() {
-  g_vdisp_count++;
-  if ((g_vdisp_count % 2) == 0) {
+//  g_vdisp_count++;
+//  if ((g_vdisp_count % 2) == 0) {
     output_image(&g_image_frames[ g_current_frame_index++ ]);
     if (g_current_frame_index >= g_max_frame_index) {
       g_current_frame_index = 0;
     }
-  }
-  if (g_vdisp_count >= 1000000) g_vdisp_count = 0;
+//  }
+//  if (g_vdisp_count >= 1000000) g_vdisp_count = 0;
 }
 
 //
@@ -287,9 +286,6 @@ static int load_gif_image(char* gif_file_name) {
         unsigned char* sub_block_data2 = NULL;
         int sub_block_ofs2 = 0;
 
-#ifdef DEBUG
-        printf("available memory=%d\n",sizmem());
-#endif
         // image block header fields
         image_block->separator     = block_type;
         image_block->left_position = get_ushort_buffer(file_buffer_ptr, &file_buffer_ofs, file_buffer_size, fp);
@@ -316,14 +312,6 @@ static int load_gif_image(char* gif_file_name) {
           }
         }
 
-#ifdef DEBUG
-        printf("image block - left:%d,top:%d,width:%d,height:%d\n",
-              image_block->left_position,
-              image_block->top_position,
-              image_block->width,
-              image_block->height);        
-#endif
-
         // local palette
         if (read_bits(image_block->flag_code,7,1)) {
           int lct_size = 1 << (1 + (read_bits(image_block->flag_code,0,3)));
@@ -333,16 +321,10 @@ static int load_gif_image(char* gif_file_name) {
             unsigned char b = get_uchar_buffer(file_buffer_ptr, &file_buffer_ofs, file_buffer_size, fp);
             image_frame->local_color_table[i] = g_rgb555_r[ r ] + g_rgb555_g[ g ] + g_rgb555_b[ b ];
           }
-#ifdef DEBUG
-          printf("loaded local palette. (%d colors)\n",lct_size);
-#endif
         }
 
         // read lzw minimum code size
         image_block->lzw_min_code_size = get_uchar_buffer(file_buffer_ptr, &file_buffer_ofs, file_buffer_size, fp);
-#ifdef DEBUG
-        printf("lzw min code size=%d\n",image_block->lzw_min_code_size);
-#endif
 
         // total number of pixels
         pixel_count = (image_block->width) * (image_block->height);
@@ -557,31 +539,25 @@ static int load_gif_image(char* gif_file_name) {
 
       g_max_frame_index = image_frame_index;
       g_current_frame_index = 0;
-      g_vdisp_count = 0;
+//      g_vdisp_count = 0;
 
 	    //initVsyncInterrupt(output_image_vdisp);
 
-	    int current = g_vdisp_count;
+//	    int current = g_vdisp_count;
 
-	    while (INPOUT(0xFF) == 0) {
-		    while (current == g_vdisp_count) {}
-  	    current = g_vdisp_count;
-	    }
+//	    while (INPOUT(0xFF) == 0) {
+//		    while (current == g_vdisp_count) {}
+// 	    current = g_vdisp_count;
+//	    }
 
 	    //termVsyncInterrupt();
 
-     // for (int l = 0; l < 3; l++) {
-      for (int i = 0; i < image_frame_index; i++) {
+//      for (int i = 0; i < image_frame_index; i++) {
+//        while( (*gpip & 0x10));
+//        while( (*gpip & 0x10));
+//        output_image(&g_image_frames[i]);
+//      }
 
-        for (int j = 0; j < 2; j++) {
-          //while(!(*gpip & 0x10));
-          while( (*gpip & 0x10));
-        }
-
-        output_image_vdisp();
-      }
-    //  }
-/*
       while( (*gpip & 0x10));     // wait while V-DISP is H
       while(!(*gpip & 0x10));     // wait while V-DISP is L
 
@@ -600,7 +576,7 @@ static int load_gif_image(char* gif_file_name) {
 
       while(!(*gpip & 0x10));     // wait while V-DISP is L
       while( (*gpip & 0x10));     // wait while V-DISP is H
-*/
+
     }
 
     // close file
@@ -744,8 +720,7 @@ static void show_help_message() {
   printf("usage: gifex.x [options] <image.gif>\n");
   printf("options:\n");
   printf("   -c ... clear graphic screen\n");
-  printf("   -s<n> ... screen mode (0:384x256, 1:512x512, 2:768x512(512x512), 3:768x512(full,XEiJ only)\n");
-  printf("   -e ... use extended graphic mode for XEiJ (same as -s3)\n");
+  printf("   -s<n> ... screen mode 0:384x256, 1:512x512, 2:768x512(512x512), 3:768x512(full,XEiJ only)\n");
   printf("   -h ... show this help message\n");
   printf("   -i ... show file information\n");
   printf("   -n ... image centering\n");
@@ -775,9 +750,6 @@ int main(int argc, char* argv[]) {
     if (argv[i][0] == '-') {
       if (argv[i][1] == 'c') {
         g_clear_screen = 1;
-      } else if (argv[i][1] == 'e') {
-        g_extended_graphic_mode = 1;
-        g_screen_mode = 3;
       } else if (argv[i][1] == 'i') {
         g_information_mode = 1;
       } else if (argv[i][1] == 'n') {
@@ -792,7 +764,6 @@ int main(int argc, char* argv[]) {
         g_brightness = atoi(argv[i]+2);
       } else if (argv[i][1] == 's') {
         g_screen_mode = atoi(argv[i]+2);
-        if (g_screen_mode == 3) g_extended_graphic_mode = 1;
       } else if (argv[i][1] == 'f') {
         g_image_index_limit = atoi(argv[i]+2);
       } else if (argv[i][1] == 'o') {
@@ -850,8 +821,8 @@ int main(int argc, char* argv[]) {
   g_output_buffer_size = 131072 * g_buffer_memory_size_factor;
 
   // cropping window
-  g_actual_width = g_extended_graphic_mode ? ACTUAL_WIDTH_EX : ACTUAL_WIDTH;
-  g_actual_height = g_extended_graphic_mode ? ACTUAL_HEIGHT_EX : ACTUAL_HEIGHT;
+  g_actual_width = g_screen_mode == 3 ? ACTUAL_WIDTH_EX : ACTUAL_WIDTH;
+  g_actual_height = g_screen_mode == 3 ? ACTUAL_HEIGHT_EX : ACTUAL_HEIGHT;
 
    if (g_information_mode == 1) {
     describe_gif_image(gif_file_name);
@@ -873,7 +844,7 @@ int main(int argc, char* argv[]) {
   initialize_screen(g_screen_mode);
 
   // initialize palette (65536 colors)
-  initialize_palette();
+  initialize_palette(g_screen_mode);
 
   // cursor display off
   C_CUROFF();
