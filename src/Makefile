@@ -25,14 +25,14 @@ TARGET_FILE = GIFEX.X
 INCLUDE_FLAGS = -I${XDEV68K_DIR}/include/xc -I${XDEV68K_DIR}/include/xdev68k
 
 # コンパイルフラグ
-COMMON_FLAGS = -m68000 -Os $(INCLUDE_FLAGS)
+COMMON_FLAGS = -m68000 -Os $(INCLUDE_FLAGS) -z-stack=327680
 CFLAGS = $(COMMON_FLAGS) -Wno-builtin-declaration-mismatch -fcall-used-d2 -fcall-used-a2 \
-    -finput-charset=cp932 -fexec-charset=cp932 -fverbose-asm \
-	-z-stack=32768 -D__time_t_defined -D__clock_t_defined \
+    -fexec-charset=cp932 -fverbose-asm -fno-defer-pop \
+	-D__time_t_defined -D__clock_t_defined \
 	-D__XDEV68K__
 
 # *.c ソースファイル
-C_SRCS = gifex.c
+C_SRCS = memory.c buffer.c lzw.c crtc.c main.c
 
 # *.s ソースファイル
 ASM_SRCS = 
@@ -40,6 +40,7 @@ ASM_SRCS =
 # リンク対象のライブラリファイル
 LIBS =\
 	${XDEV68K_DIR}/lib/xc/CLIB.L \
+	${XDEV68K_DIR}/lib/xc/BASLIB.L \
 	${XDEV68K_DIR}/lib/xc/DOSLIB.L \
 	${XDEV68K_DIR}/lib/xc/IOCSLIB.L \
 	${XDEV68K_DIR}/lib/xc/FLOATFNC.L \

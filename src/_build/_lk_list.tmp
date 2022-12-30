@@ -1,5 +1,10 @@
-_build/gifex.o
+_build/memory.o
+_build/buffer.o
+_build/lzw.o
+_build/crtc.o
+_build/main.o
 _build/CLIB.L
+_build/BASLIB.L
 _build/DOSLIB.L
 _build/IOCSLIB.L
 _build/FLOATFNC.L
