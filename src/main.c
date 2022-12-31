@@ -113,7 +113,7 @@ void output_image(GIF_IMAGE_FRAME* image_frame) {
     if ((offset_x + x) < g_actual_width) {
       if (transparent_index < 0 || palette_code != transparent_index) {
         *gvram++ = palette[ palette_code ];
-      } else if (g_current_frame_index == 0 && palette_code == transparent_index && global_palette != NULL) {
+      } else if (palette_code == transparent_index && global_palette != NULL) {
         *gvram++ = global_palette[ image_frame->bg_color_index ];
       } else {
         gvram++;
@@ -133,16 +133,15 @@ void output_image(GIF_IMAGE_FRAME* image_frame) {
 
   }
 
-  if (++g_current_frame_index >= g_max_frame_index) {
-    g_current_frame_index = 0;
-  }
 }
 
 //
 //  output image data to graphic vram (vdisp handler)
 //
 void __attribute__((interrupt)) output_image_vdisp() {
-  output_image(&g_image_frames[ g_current_frame_index ]);
+  if (g_current_frame_index < g_max_frame_index) {
+    output_image(&g_image_frames[ g_current_frame_index++ ]);
+  }
 }
 
 //
@@ -344,8 +343,8 @@ static int load_gif_image(char* gif_file_name) {
             end_of_image = 1;
           } else if (sub_block_buffer_ofs + sub_block_size > sub_block_buffer_size) {
             printf("error: sub block buffer memory overflow.\n");
-            end_of_image = 1;
-            end_of_gif = 1;
+            end_of_image = -1;
+            end_of_gif = -1;
             break;
           } else {
             memcpy_buffer(sub_block_buffer_ptr + sub_block_buffer_ofs, file_buffer_ptr, &file_buffer_ofs, file_buffer_size, sub_block_size, fp);
@@ -354,6 +353,14 @@ static int load_gif_image(char* gif_file_name) {
 
         } while (end_of_image == 0);
 
+        // ESC key check
+        //if (B_KEYINP() == 0x010001) {
+        if (BITSNS(0) & 0x02) {
+          end_of_gif = -1;
+          break;
+        }
+
+        // decode LZW bit stream
         decode_buffer_ofs = decode_lzw(sub_block_buffer_ptr,sub_block_buffer_ofs,decode_buffer_ptr,image_block->lzw_min_code_size,pixel_count);
 #ifdef DEBUG
         printf("frame data size = %d\n",decode_buffer_ofs);
@@ -373,8 +380,7 @@ static int load_gif_image(char* gif_file_name) {
               decode_buffer_ptr = malloc__(decode_buffer_size, g_high_memory_mode); // reallocate buffer for next decode.
             } else {
               printf("error: high memory resize error.\n");
-              end_of_image = 1;
-              end_of_gif = 1;
+              end_of_gif = -1;
               break;
             }
 
@@ -383,8 +389,7 @@ static int load_gif_image(char* gif_file_name) {
             // if normal memory mode, allocate a new buffer with the given size copy copy data.
             if ((image_frame->frame_data_ptr = malloc__(size,g_high_memory_mode)) == NULL) {
               printf("error: memory allocation failure (errno=%d).\n",errno);
-              end_of_image = 1;
-              end_of_gif = 1;
+              end_of_gif = -1;
               break;
             }
             memcpy(image_frame->frame_data_ptr,decode_buffer_ptr,size);
@@ -396,7 +401,7 @@ static int load_gif_image(char* gif_file_name) {
 
           // incremental mode
           int delay_time = image_frame->graphic_ctrl_ext.delay_time;
-          int vsync_count = 1;
+          int vsync_count = 2;
 
 #ifdef DEBUG
           printf("delay_time=%d\n",delay_time);
@@ -409,12 +414,20 @@ static int load_gif_image(char* gif_file_name) {
           } else if (delay_time > 0) {
             vsync_count = (int)((60 * delay_time) / 1000);
           }
+          if (vsync_count < 2) vsync_count = 2;
 
           // output image
           image_frame->frame_data_ptr = decode_buffer_ptr;
           image_frame->frame_data_size = decode_buffer_ofs;
 
-          for (int i = 0; i < vsync_count; i++) {
+          // ESC key check
+          //if (B_KEYSNS() == 0x010001) {
+          if (BITSNS(0) & 0x02) {
+            end_of_gif = -1;
+            break;
+          }
+
+         for (int i = 0; i < vsync_count; i++) {
             WAIT_VBLANK;
           }
 
@@ -461,7 +474,7 @@ static int load_gif_image(char* gif_file_name) {
           graphic_ctrl_ext->terminator = get_uchar_buffer(file_buffer_ptr, &file_buffer_ofs, file_buffer_size, fp);
           if (graphic_ctrl_ext->terminator != 0x00) {
             printf("error: graphic control extension read error.\n");
-            end_of_gif = 1;
+            end_of_gif = -1;
             break;            
           }
 
@@ -483,7 +496,7 @@ static int load_gif_image(char* gif_file_name) {
           comment_ext.terminator = get_uchar_buffer(file_buffer_ptr, &file_buffer_ofs, file_buffer_size, fp);
           if (comment_ext.terminator != 0x00) {
             printf("error: comment extension read error.\n");
-            end_of_gif = 1;
+            end_of_gif = -1;
             break;            
           }
 
@@ -512,7 +525,7 @@ static int load_gif_image(char* gif_file_name) {
           plain_text_ext.terminator = get_uchar_buffer(file_buffer_ptr, &file_buffer_ofs, file_buffer_size, fp);
           if (plain_text_ext.terminator != 0x00) {
             printf("error: plain text extension read error.\n");
-            end_of_gif = 1;
+            end_of_gif = -1;
             break;            
           }
 
@@ -538,14 +551,14 @@ static int load_gif_image(char* gif_file_name) {
           app_ext.terminator = get_uchar_buffer(file_buffer_ptr, &file_buffer_ofs, file_buffer_size, fp);
           if (app_ext.terminator != 0x00) {
             printf("error: application extension read error.\n");
-            end_of_gif = 1;
+            end_of_gif = -1;
             break;            
           }
 
         } else {
 
           printf("error: unknown extension label (0x%02X).\n", extension_label);
-          end_of_gif = 1;
+          end_of_gif = -1;
           break;
 
         }
@@ -553,7 +566,7 @@ static int load_gif_image(char* gif_file_name) {
       } else {
 
         printf("error: unknown block (0x%02X).\n", block_type);
-        end_of_gif = 1;
+        end_of_gif = -1;
         break;
 
       }
@@ -561,10 +574,10 @@ static int load_gif_image(char* gif_file_name) {
     } while (end_of_gif == 0);
 
     // if memory cache mode, play animation here using vsync interrupt
-    if (g_memory_cache_mode) {
+    if (end_of_gif == 1 && g_memory_cache_mode) {
 
       int delay_time = g_image_frames[0].graphic_ctrl_ext.delay_time;
-      int vsync_count = 1;
+      int vsync_count = 2;
       
       if (g_frame_rate > 0) {
         vsync_count = 60 / g_frame_rate;
@@ -574,22 +587,23 @@ static int load_gif_image(char* gif_file_name) {
 #ifdef DEBUG
       printf("delay_time=%d,vsync_count=%d\n",delay_time,vsync_count);
 #endif
+      if (vsync_count < 2) vsync_count = 2;
+
       g_max_frame_index = image_frame_index;
       g_current_frame_index = 0;
+
+      if (g_clear_screen) C_CLS_AL();
 
       WAIT_VBLANK;
       WAIT_VSYNC;
 
       if (VDISPST((unsigned char*)output_image_vdisp, 0, vsync_count) == 0) {
 
-        int key_code;
-        // wait until any key is hit
-	      //while (INPOUT(0xFF) == 0) {
-        while ((key_code = B_KEYINP()) == 0) {
-#ifdef DEBUG
-          printf("key_code=%d\n",key_code);
-#endif          
-          SLEEP_PR(20);  
+        while (g_current_frame_index < g_max_frame_index) {          
+          // ESC key check
+          if (BITSNS(0) & 0x02) {
+            break;
+          }
         }
 
         WAIT_VBLANK;
@@ -604,19 +618,11 @@ static int load_gif_image(char* gif_file_name) {
       WAIT_VSYNC;
       WAIT_VBLANK;
 
-    } else {
+    }
 
-      if (g_key_wait_mode) {
-        int key_code;
-        // wait until any key is hit
-//	      while (INPOUT(0xFF) == 0) {
-	      while ((key_code = B_KEYINP()) == 0) {
-#ifdef DEBUG
-          printf("key_code=%d\n",key_code);
-#endif
-          SLEEP_PR(20);
-        }
-
+    if (end_of_gif == 1 && g_key_wait_mode) {
+      while (INPOUT(0xFF) == 0) {
+//          SLEEP_PR(100);
       }
 
     }
