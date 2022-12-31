@@ -27,12 +27,13 @@
 int g_clear_screen = 0;                 // 1:clear screen by picture
 int g_information_mode = 0;             // 1:show PNG file information
 int g_centering_mode = 0;               // 1:centering yes
-int g_wait_mode = 0;                    // 1:wait key input
+int g_key_wait_mode = 0;                // 1:wait key input
 int g_brightness = 100;                 // 0-100% brightness
 int g_memory_cache_mode = 0;            // 1:load all images to memory before animation
 int g_high_memory_mode = 0;             // 1:use HIMEM for buffering
 int g_screen_mode = 0;                  // 0:384x256 1:512x512 2:768x512(XEiJ extended graphic)
 int g_image_index_limit = MAX_IMAGE_FRAMES;  // max image frames
+int g_frame_rate = -1;                  // 0:no wait, n:n frames/sec, -1:auto
 
 // global variables (buffers)
 int g_buffer_memory_size_factor = 8;    // in=64KB*factor, out=128KB*factor
@@ -529,13 +530,22 @@ static int load_gif_image(char* gif_file_name) {
     // if memory cache mode, play animation here using vsync interrupt
     if (g_memory_cache_mode) {
 
+      int delay_time = g_image_frames[0].graphic_ctrl_ext.delay_time;
+      int vsync_count = 1;
+      
+      if (g_frame_rate > 0) {
+        vsync_count = 60 / g_frame_rate;
+      } else if (delay_time > 0) {
+        vsync_count = (int)(1000 / (60 * delay_time));
+      }
+
       g_max_frame_index = image_frame_index;
       g_current_frame_index = 0;
 
       WAIT_VBLANK;
       WAIT_VSYNC;
 
-      if (VDISPST((unsigned char*)output_image_vdisp, 0, 2) == 0) {
+      if (VDISPST((unsigned char*)output_image_vdisp, 0, vsync_count) == 0) {
 
         // wait until any key is hit
 	      while (INPOUT(0xFF) == 0) {
@@ -553,6 +563,17 @@ static int load_gif_image(char* gif_file_name) {
 
       WAIT_VSYNC;
       WAIT_VBLANK;
+
+    } else {
+
+      if (g_key_wait_mode) {
+
+        // wait until any key is hit
+	      while (INPOUT(0xFF) == 0) {
+          ;
+        }
+
+      }
 
     }
 
@@ -693,21 +714,22 @@ static int describe_gif_image(char* gif_file_name) {
 //  show help messages
 //
 static void show_help_message() {
-  printf("GIFEX - GIF image loader with XEiJ graphic extension support version " VERSION " by tantan 2022\n");
+  printf("GIFEX - GIF image loader with XEiJ graphic extension support version " VERSION " by tantan 2023\n");
   printf("usage: gifex.x [options] <image.gif>\n");
   printf("options:\n");
+  printf("   -b<n> ... buffer memory size factor[1-32] (default:8)\n");
   printf("   -c ... clear graphic screen\n");
-  printf("   -s<n> ... screen mode 0:384x256, 1:512x512, 2:768x512(512x512), 3:768x512(full,XEiJ only)\n");
+  printf("   -f<n> ... max number of frames (default:no limit)\n");
   printf("   -h ... show this help message\n");
   printf("   -i ... show file information\n");
-  printf("   -n ... image centering\n");
-  printf("   -m ... memory cache mode\n");
-  printf("   -u ... use high memory for buffering\n");
   printf("   -k ... wait key input\n");
-  printf("   -f<n> ... max number of images\n");
-  printf("   -o<x,y> ... display position\n");
+  printf("   -m ... memory cache mode\n");
+  printf("   -n ... image centering\n");
+  printf("   -o<x,y> ... display offset position\n");
+  printf("   -s<n> ... screen mode 0:384x256, 1:512x512, 2:768x512, 3:768x512(full - XEiJ only)\n");
+  printf("   -u ... use high memory\n");
   printf("   -v<n> ... brightness (0-100)\n");
-  printf("   -b<n> ... buffer memory size factor[1-16] (default:8)\n");
+  printf("   -w<n> ... frame rate (0:no wait, n:n frames/sec, default:auto)\n");
 }
 
 //
@@ -732,7 +754,7 @@ int main(int argc, char* argv[]) {
       } else if (argv[i][1] == 'n') {
         g_centering_mode = 1;
       } else if (argv[i][1] == 'k') {
-        g_wait_mode = 1;
+        g_key_wait_mode = 1;
       } else if (argv[i][1] == 'm') {
         g_memory_cache_mode = 1;
       } else if (argv[i][1] == 'u') {
@@ -741,8 +763,18 @@ int main(int argc, char* argv[]) {
         g_brightness = atoi(argv[i]+2);
       } else if (argv[i][1] == 's') {
         g_screen_mode = atoi(argv[i]+2);
+        if (g_screen_mode < 0 || g_screen_mode > 3) {
+          printf("error: unknown screen mode.\n");
+          return 1;
+        }
       } else if (argv[i][1] == 'f') {
         g_image_index_limit = atoi(argv[i]+2);
+      } else if (argv[i][1] == 'w') {
+        g_frame_rate = atoi(argv[i]+2);
+        if (g_frame_rate < 0 || g_frame_rate > 60) {
+          printf("error: incorrect frame rate.\n");
+          return 1;
+        }
       } else if (argv[i][1] == 'o') {
         static char opt[64];
         strcpy(opt,argv[i]+2);
@@ -832,6 +864,11 @@ int main(int argc, char* argv[]) {
 
   // load GIF image
   load_gif_image(gif_file_name);
+
+  // reset system port
+  if (g_screen_mode == SCREEN_MODE_384x256) {
+    initialize_screen(SCREEN_MODE_512x512);
+  }
 
   // cursor on
   C_CURON();

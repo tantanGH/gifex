@@ -11,7 +11,6 @@ int initialize_screen(int mode) {
   volatile unsigned short* crtc_r20_ptr = (unsigned short*)CRTC_R20;
   volatile unsigned short* vdc_r1_ptr   = (unsigned short*)VDC_R1;
   volatile unsigned short* vdc_r2_ptr   = (unsigned short*)VDC_R2;
-  volatile unsigned char* sysp = (unsigned char*)SYSP;
   volatile unsigned char* scon = (unsigned char*)SCON;
   int current_resolution;
 
@@ -53,7 +52,7 @@ int initialize_screen(int mode) {
         crtc_r20_ptr[0] = 0x311;    // set last
       }
 
-      sysp[0] |= 0x02;              // system port for dot clock change - Inside/Out p44
+      SET_SYSP;                     // system port for dot clock change - Inside/Out p44
 
       vdc_r1_ptr[0] = 3;            // memory mode 3
 
@@ -105,7 +104,7 @@ int initialize_screen(int mode) {
         crtc_r20_ptr[0] = 0x0315;     // set last, memory mode 3
       }
 
-      sysp[0] &= ~0x02;               // system port for dot clock change - Inside/Out p44
+      RESET_SYSP;                     // system port for dot clock change - Inside/Out p44
 
       vdc_r1_ptr[0] = 3;              // memory mode 3
 
@@ -158,7 +157,7 @@ int initialize_screen(int mode) {
         crtc_r20_ptr[0] = 0x0316;     // set last, memory mode 3
       }
 
-      sysp[0] &= ~0x02;               // system port for dot clock change - Inside/Out p44
+      RESET_SYSP;                     // system port for dot clock change - Inside/Out p44
 
       vdc_r1_ptr[0] = 3;              // memory mode 3
 
@@ -198,7 +197,7 @@ int initialize_screen(int mode) {
 
       crtc_r20_ptr[0] = 0x0716;       // memory mode 7 (for XEiJ only)
 
-      sysp[0] &= ~0x02;               // system port for dot clock change - Inside/Out p44
+      RESET_SYSP;                     // system port for dot clock change - Inside/Out p44
 
       vdc_r1_ptr[0] = 7;              // memory mode 7 (for XEiJ only)
   

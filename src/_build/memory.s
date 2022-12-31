@@ -147,19 +147,61 @@ _?L6:							*.L6:
 	jbra _?L5					*	jra .L5		|
 							*	.size	getsize_himem, .-getsize_himem
 	.align	2					*	.align	2
+	.globl	_resize_himem				*	.globl	resize_himem
+							*	.type	resize_himem, @function
+_resize_himem:						*resize_himem:
+	link.w a6,#-112					*	link.w %fp,#-112	|,
+	move.l a4,-(sp)					*	move.l %a4,-(%sp)	|,
+	move.l a3,-(sp)					*	move.l %a3,-(%sp)	|,
+							*| memory.c:49:     struct REGS in_regs = { 0 };
+	pea 40.w					*	pea 40.w		|
+	clr.l -(sp)					*	clr.l -(%sp)	|
+	pea -96(a6)					*	pea -96(%fp)		|
+	lea _memset,a4					*	lea memset,%a4	|, tmp38
+	jbsr (a4)					*	jsr (%a4)		| tmp38
+	lea (12,sp),sp					*	lea (12,%sp),%sp	|,
+							*| memory.c:50:     struct REGS out_regs = { 0 };
+	lea (-56,a6),a3					*	lea (-56,%fp),%a3	|,, tmp40
+	pea 56.w					*	pea 56.w		|
+	clr.l -(sp)					*	clr.l -(%sp)	|
+	move.l a3,-(sp)					*	move.l %a3,-(%sp)	| tmp40,
+	jbsr (a4)					*	jsr (%a4)		| tmp38
+	lea (12,sp),sp					*	lea (12,%sp),%sp	|,
+							*| memory.c:52:     in_regs.d0 = 0xF8;          // IOCS _HIMEM
+	move.l #248,-112(a6)				*	move.l #248,-112(%fp)	|, in_regs.d0
+							*| memory.c:53:     in_regs.d1 = 4;             // HIMEM_RESIZE
+	moveq #4,d0					*	moveq #4,%d0	|,
+	move.l d0,-108(a6)				*	move.l %d0,-108(%fp)	|, in_regs.d1
+							*| memory.c:54:     in_regs.d2 = (size_t)ptr;
+	move.l 8(a6),-104(a6)				*	move.l 8(%fp),-104(%fp)	| ptr, in_regs.d2
+							*| memory.c:55:     in_regs.d3 = size;
+	move.l 12(a6),-100(a6)				*	move.l 12(%fp),-100(%fp)	| size, in_regs.d3
+							*| memory.c:57:     TRAP15(&in_regs, &out_regs);
+	move.l a3,-(sp)					*	move.l %a3,-(%sp)	| tmp40,
+	pea -112(a6)					*	pea -112(%fp)		|
+	jbsr _TRAP15					*	jsr TRAP15		|
+	addq.l #8,sp					*	addq.l #8,%sp	|,
+							*| memory.c:60: }
+	move.l -56(a6),d0				*	move.l -56(%fp),%d0	| out_regs.d0,
+	move.l -120(a6),a3				*	move.l -120(%fp),%a3	|,
+	move.l -116(a6),a4				*	move.l -116(%fp),%a4	|,
+	unlk a6						*	unlk %fp		|
+	rts						*	rts
+							*	.size	resize_himem, .-resize_himem
+	.align	2					*	.align	2
 	.globl	_malloc_mainmem				*	.globl	malloc_mainmem
 							*	.type	malloc_mainmem, @function
 _malloc_mainmem:					*malloc_mainmem:
-							*| memory.c:51:   int addr = MALLOC(size);
+							*| memory.c:66:   int addr = MALLOC(size);
 	move.l 4(sp),-(sp)				*	move.l 4(%sp),-(%sp)	| size,
 	jbsr _MALLOC					*	jsr MALLOC		|
 	addq.l #4,sp					*	addq.l #4,%sp	|,
-							*| memory.c:52:   return (addr >= 0x81000000) ? NULL : (char*)addr;
+							*| memory.c:67:   return (addr >= 0x81000000) ? NULL : (char*)addr;
 	cmp.l #-2130706433,d0				*	cmp.l #-2130706433,%d0	|, addr
-	jbls _?L9					*	jls .L9		|
+	jbls _?L10					*	jls .L10		|
 	moveq #0,d0					*	moveq #0,%d0	| addr
-_?L9:							*.L9:
-							*| memory.c:53: }
+_?L10:							*.L10:
+							*| memory.c:68: }
 	rts						*	rts
 							*	.size	malloc_mainmem, .-malloc_mainmem
 	.align	2					*	.align	2
@@ -167,13 +209,13 @@ _?L9:							*.L9:
 							*	.type	free_mainmem, @function
 _free_mainmem:						*free_mainmem:
 	move.l 4(sp),d0					*	move.l 4(%sp),%d0	| ptr, ptr
-							*| memory.c:56:   if (ptr == NULL) return;
-	jbeq _?L11					*	jeq .L11		|
-							*| memory.c:58: }
-							*| memory.c:57:   MFREE((int)ptr);
+							*| memory.c:71:   if (ptr == NULL) return;
+	jbeq _?L12					*	jeq .L12		|
+							*| memory.c:73: }
+							*| memory.c:72:   MFREE((int)ptr);
 	jbra _MFREE					*	jra MFREE		|
-_?L11:							*.L11:
-							*| memory.c:58: }
+_?L12:							*.L12:
+							*| memory.c:73: }
 	rts						*	rts
 							*	.size	free_mainmem, .-free_mainmem
 	.align	2					*	.align	2
@@ -181,17 +223,17 @@ _?L11:							*.L11:
 							*	.type	malloc__, @function
 _malloc__:						*malloc__:
 	move.l 4(sp),d0					*	move.l 4(%sp),%d0	| size, size
-							*| memory.c:64:     return himem ? malloc_himem(size) : malloc_mainmem(size);
+							*| memory.c:79:     return himem ? malloc_himem(size) : malloc_mainmem(size);
 	tst.l 8(sp)					*	tst.l 8(%sp)	| himem
-	jbeq _?L14					*	jeq .L14		|
-							*| memory.c:65: }
-							*| memory.c:64:     return himem ? malloc_himem(size) : malloc_mainmem(size);
+	jbeq _?L15					*	jeq .L15		|
+							*| memory.c:80: }
+							*| memory.c:79:     return himem ? malloc_himem(size) : malloc_mainmem(size);
 	jbra _malloc_himem				*	jra malloc_himem		|
-_?L14:							*.L14:
-							*| memory.c:64:     return himem ? malloc_himem(size) : malloc_mainmem(size);
+_?L15:							*.L15:
+							*| memory.c:79:     return himem ? malloc_himem(size) : malloc_mainmem(size);
 	move.l d0,4(sp)					*	move.l %d0,4(%sp)	| size,
-							*| memory.c:65: }
-							*| memory.c:64:     return himem ? malloc_himem(size) : malloc_mainmem(size);
+							*| memory.c:80: }
+							*| memory.c:79:     return himem ? malloc_himem(size) : malloc_mainmem(size);
 	jbra _malloc_mainmem				*	jra malloc_mainmem		|
 							*	.size	malloc__, .-malloc__
 	.align	2					*	.align	2
@@ -199,17 +241,17 @@ _?L14:							*.L14:
 							*	.type	free__, @function
 _free__:						*free__:
 	move.l 4(sp),d0					*	move.l 4(%sp),%d0	| ptr, ptr
-							*| memory.c:68:     if (himem) {
+							*| memory.c:83:     if (himem) {
 	tst.l 8(sp)					*	tst.l 8(%sp)	| himem
-	jbeq _?L16					*	jeq .L16		|
-							*| memory.c:73: }
-							*| memory.c:69:         free_himem(ptr);
+	jbeq _?L17					*	jeq .L17		|
+							*| memory.c:88: }
+							*| memory.c:84:         free_himem(ptr);
 	jbra _free_himem				*	jra free_himem		|
-_?L16:							*.L16:
-							*| memory.c:71:         free_mainmem(ptr);
+_?L17:							*.L17:
+							*| memory.c:86:         free_mainmem(ptr);
 	move.l d0,4(sp)					*	move.l %d0,4(%sp)	| ptr,
-							*| memory.c:73: }
-							*| memory.c:71:         free_mainmem(ptr);
+							*| memory.c:88: }
+							*| memory.c:86:         free_mainmem(ptr);
 	jbra _free_mainmem				*	jra free_mainmem		|
 							*	.size	free__, .-free__
 							*	.ident	"GCC: (GNU) 12.2.0"

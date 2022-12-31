@@ -23,6 +23,10 @@
 #define WAIT_VSYNC   while(!(((volatile unsigned char*)GPIP)[0] & 0x10))
 #define WAIT_VBLANK  while(((volatile unsigned char*)GPIP)[0] & 0x10)
 
+// reset system port
+#define SET_SYSP     (((volatile unsigned char*)SYSP)[0] |=  0x02)
+#define RESET_SYSP   (((volatile unsigned char*)SYSP)[0] &= ~0x02)
+
 // wait SCON write
 #define WAIT_SCON    for (int i = 0; i < 0x1000; i++) {}
 
