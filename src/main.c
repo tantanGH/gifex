@@ -529,8 +529,6 @@ static int load_gif_image(char* gif_file_name) {
     // if memory cache mode, play animation here using vsync interrupt
     if (g_memory_cache_mode) {
 
-      volatile unsigned char* gpip = (unsigned char*)GPIP;
-
       g_max_frame_index = image_frame_index;
       g_current_frame_index = 0;
 
@@ -539,7 +537,10 @@ static int load_gif_image(char* gif_file_name) {
 
       if (VDISPST((unsigned char*)output_image_vdisp, 0, 2) == 0) {
 
-        getchar();
+        // wait until any key is hit
+	      while (INPOUT(0xFF) == 0) {
+          ;
+        }
 
         WAIT_VBLANK;
         WAIT_VSYNC;

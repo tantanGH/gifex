@@ -64,9 +64,14 @@ _?L5:							*.L5:
 	move.w #27,15204368				*	move.w #27,15204368	|, MEM[(volatile short unsigned int *)15204368B]
 							*| crtc.c:199:       crtc_r20_ptr[0] = 0x0716;       // memory mode 7 (for XEiJ only)
 	move.w #1814,15204392				*	move.w #1814,15204392	|, MEM[(volatile short unsigned int *)15204392B]
+							*| crtc.c:201:       sysp[0] &= ~0x02;               // system port for dot clock change - Inside/Out p44
+	move.l #15261703,a0				*	move.l #15261703,%a0	|, tmp142
+	move.b (a0),d0					*	move.b (%a0),%d0	| MEM[(volatile unsigned char *)15261703B], _13
+	and.b #-3,d0					*	and.b #-3,%d0	|, _14
+	move.b d0,(a0)					*	move.b %d0,(%a0)	| _14, MEM[(volatile unsigned char *)15261703B]
 							*| crtc.c:203:       vdc_r1_ptr[0] = 7;              // memory mode 7 (for XEiJ only)
 	move.w #7,15213568				*	move.w #7,15213568	|, MEM[(volatile short unsigned int *)15213568B]
-							*| crtc.c:212:       vdc_r2_ptr[0] = 0x30;           // graphic on (w:1024 h:1024)
+							*| crtc.c:212:       vdc_r2_ptr[0] = 0x30;           // text/graphic on (w:1024 h:1024)
 	move.w #48,15214080				*	move.w #48,15214080	|, MEM[(volatile short unsigned int *)15214080B]
 							*| crtc.c:214:       crtc_r12_ptr[0] = 0;            // scroll position X
 	move.w #0,15204376				*	move.w #0,15204376	|, MEM[(volatile short unsigned int *)15204376B]
@@ -78,8 +83,8 @@ _?L6:							*.L6:
 							*| crtc.c:31:       current_resolution = crtc_r20_ptr[0] & 0x013;
 	move.w 15204392,d0				*	move.w 15204392,%d0	| MEM[(volatile short unsigned int *)15204392B], _4
 							*| crtc.c:32:       if (current_resolution > 0x11) {
-	and.w #19,d0					*	and.w #19,%d0	|, tmp48
-	cmp.w #17,d0					*	cmp.w #17,%d0	|, tmp48
+	and.w #19,d0					*	and.w #19,%d0	|, tmp54
+	cmp.w #17,d0					*	cmp.w #17,%d0	|, tmp54
 	jbls _?L10					*	jls .L10		|
 							*| crtc.c:33:         crtc_r20_ptr[0] = 0x311;    // set first
 	move.w #785,15204392				*	move.w #785,15204392	|, MEM[(volatile short unsigned int *)15204392B]
@@ -103,23 +108,16 @@ _?L6:							*.L6:
 	move.w #69,15204352				*	move.w #69,15204352	|, MEM[(volatile short unsigned int *)15204352B]
 _?L11:							*.L11:
 							*| crtc.c:56:       sysp[0] |= 0x02;              // system port for dot clock change - Inside/Out p44
-	move.l #15261703,a0				*	move.l #15261703,%a0	|, tmp69
+	move.l #15261703,a0				*	move.l #15261703,%a0	|, tmp75
 	move.b (a0),d0					*	move.b (%a0),%d0	| MEM[(volatile unsigned char *)15261703B], _5
 							*| crtc.c:56:       sysp[0] |= 0x02;              // system port for dot clock change - Inside/Out p44
 	or.b #2,d0					*	or.b #2,%d0	|, _6
-	move.b d0,(a0)					*	move.b %d0,(%a0)	| _6, MEM[(volatile unsigned char *)15261703B]
-							*| crtc.c:58:       vdc_r1_ptr[0] = 3;            // memory mode 3
-	move.w #3,15213568				*	move.w #3,15213568	|, MEM[(volatile short unsigned int *)15213568B]
-							*| crtc.c:60:       scon[1] = 0x000b + 4;         // R02 + 4
-	move.b #15,15403019				*	move.b #15,15403019	|, MEM[(volatile unsigned char *)15403019B]
-							*| crtc.c:63:       scon[0] = 0xff;               // 256 color mode: R00  else: 0xff
-	move.b #-1,15403018				*	move.b #-1,15403018	|, MEM[(volatile unsigned char *)15403018B]
-							*| crtc.c:64:       scon[2] = 0x28;               // R06
-	move.b #40,15403020				*	move.b #40,15403020	|, MEM[(volatile unsigned char *)15403020B]
-							*| crtc.c:65:       scon[3] = 0x11;               // R20 & 0xff
-	move.b #17,15403021				*	move.b #17,15403021	|, MEM[(volatile unsigned char *)15403021B]
 _?L16:							*.L16:
-							*| crtc.c:119:       vdc_r2_ptr[0] = 0x2f;           // graphic on (w:512 h:512)
+							*| crtc.c:108:       sysp[0] &= ~0x02;               // system port for dot clock change - Inside/Out p44
+	move.b d0,(a0)					*	move.b %d0,(%a0)	| _9,
+							*| crtc.c:110:       vdc_r1_ptr[0] = 3;              // memory mode 3
+	move.w #3,15213568				*	move.w #3,15213568	|,
+							*| crtc.c:119:       vdc_r2_ptr[0] = 0x2f;           // text/graphic on, sprite off (w:512 h:512)
 	move.w #47,15214080				*	move.w #47,15214080	|,
 							*| crtc.c:121:       crtc_r12_ptr[0] = 0;            // scroll position X
 	move.w #0,15204376				*	move.w #0,15204376	|,
@@ -185,12 +183,14 @@ _?L7:							*.L7:
 							*| crtc.c:105:         crtc_r20_ptr[0] = 0x0315;     // set last, memory mode 3
 	move.w #789,15204392				*	move.w #789,15204392	|, MEM[(volatile short unsigned int *)15204392B]
 _?L17:							*.L17:
-							*| crtc.c:110:       vdc_r1_ptr[0] = 3;              // memory mode 3
-	move.w #3,15213568				*	move.w #3,15213568	|,
+							*| crtc.c:108:       sysp[0] &= ~0x02;               // system port for dot clock change - Inside/Out p44
+	move.l #15261703,a0				*	move.l #15261703,%a0	|, tmp97
+	move.b (a0),d0					*	move.b (%a0),%d0	|, _8
+	and.b #-3,d0					*	and.b #-3,%d0	|, _9
 	jbra _?L16					*	jra .L16		|
 _?L4:							*.L4:
 							*| crtc.c:136:       int current_resolution = crtc_r20_ptr[0] & 0x013;
-	move.w 15204392,d0				*	move.w 15204392,%d0	| MEM[(volatile short unsigned int *)15204392B], _8
+	move.w 15204392,d0				*	move.w 15204392,%d0	| MEM[(volatile short unsigned int *)15204392B], _10
 							*| crtc.c:149:         crtc_r00_ptr[0] = 0x0089;     // set first
 	move.w #137,15204352				*	move.w #137,15204352	|, MEM[(volatile short unsigned int *)15204352B]
 							*| crtc.c:150:         crtc_r00_ptr[1] = 0x000e;

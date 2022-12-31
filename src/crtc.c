@@ -57,14 +57,14 @@ int initialize_screen(int mode) {
 
       vdc_r1_ptr[0] = 3;            // memory mode 3
 
-      scon[1] = 0x000b + 4;         // R02 + 4
+//      scon[1] = 0x000b + 4;         // R02 + 4
 
-      WAIT_SCON;
-      scon[0] = 0xff;               // 256 color mode: R00  else: 0xff
-      scon[2] = 0x28;               // R06
-      scon[3] = 0x11;               // R20 & 0xff
+//      WAIT_SCON;
+//      scon[0] = 0xff;               // 256 color mode: R00  else: 0xff
+//      scon[2] = 0x28;               // R06
+//      scon[3] = 0x11;               // R20 & 0xff
 
-      vdc_r2_ptr[0] = 0x2f;         // graphic on (w:512 h:256)
+      vdc_r2_ptr[0] = 0x2f;         // test/graphic on, sprite off (w:512 h:512)
 
       crtc_r12_ptr[0] = 0;          // scroll position X
       crtc_r12_ptr[1] = 0;          // scroll position Y
@@ -105,7 +105,7 @@ int initialize_screen(int mode) {
         crtc_r20_ptr[0] = 0x0315;     // set last, memory mode 3
       }
 
-//      sysp[0] |= 0x02;                // system port for dot clock change - Inside/Out p44
+      sysp[0] &= ~0x02;               // system port for dot clock change - Inside/Out p44
 
       vdc_r1_ptr[0] = 3;              // memory mode 3
 
@@ -116,7 +116,7 @@ int initialize_screen(int mode) {
 //      scon[2] = 0x28;                 // R06
 //      scon[3] = 0x15;                 // R20 & 0xff
 
-      vdc_r2_ptr[0] = 0x2f;           // graphic on (w:512 h:512)
+      vdc_r2_ptr[0] = 0x2f;           // text/graphic on, sprite off (w:512 h:512)
 
       crtc_r12_ptr[0] = 0;            // scroll position X
       crtc_r12_ptr[1] = 0;            // scroll position Y
@@ -158,7 +158,7 @@ int initialize_screen(int mode) {
         crtc_r20_ptr[0] = 0x0316;     // set last, memory mode 3
       }
 
-//      sysp[0] |= 0x02;                // system port for dot clock change - Inside/Out p44
+      sysp[0] &= ~0x02;               // system port for dot clock change - Inside/Out p44
 
       vdc_r1_ptr[0] = 3;              // memory mode 3
 
@@ -169,7 +169,7 @@ int initialize_screen(int mode) {
 //      scon[2] = 0x28;                 // R06
 //      scon[3] = 0x16;                 // R20 & 0xff
 
-      vdc_r2_ptr[0] = 0x2f;           // graphic on (w:512 h:512)
+      vdc_r2_ptr[0] = 0x2f;           // text/graphic on, sprite off (w:512 h:512)
 
       crtc_r12_ptr[0] = 0;            // scroll position X
       crtc_r12_ptr[1] = 0;            // scroll position Y
@@ -198,7 +198,7 @@ int initialize_screen(int mode) {
 
       crtc_r20_ptr[0] = 0x0716;       // memory mode 7 (for XEiJ only)
 
-//      sysp[0] |= 0x02;                // system port for dot clock change - Inside/Out p44
+      sysp[0] &= ~0x02;               // system port for dot clock change - Inside/Out p44
 
       vdc_r1_ptr[0] = 7;              // memory mode 7 (for XEiJ only)
   
@@ -209,7 +209,7 @@ int initialize_screen(int mode) {
 //      scon[2] = 0x28;                 // R06
 //      scon[3] = 0x16;                 // R20 & 0xff
 
-      vdc_r2_ptr[0] = 0x30;           // graphic on (w:1024 h:1024)
+      vdc_r2_ptr[0] = 0x30;           // text/graphic on (w:1024 h:1024)
 
       crtc_r12_ptr[0] = 0;            // scroll position X
       crtc_r12_ptr[1] = 0;            // scroll position Y

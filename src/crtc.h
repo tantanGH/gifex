@@ -3,15 +3,15 @@
 
 // graphic ops memory addresses
 #define GVRAM     (0xC00000)
-#define CRTC_R00  (0xE80000)
-#define CRTC_R12  (0xE80018)
-#define CRTC_R20  (0xE80028)
-#define VDC_R1    (0xE82400)
-#define VDC_R2    (0xE82600)
-#define PALETTE   (0xE82000)
-#define GPIP      (0xE88001)
-#define SYSP      (0xE8E007)
-#define SCON      (0xEB080A)
+#define CRTC_R00  (0xE80000)                    // CRTC R00-R08 (Inside X68000 p232)
+#define CRTC_R12  (0xE80018)                    // CRTC R12 for scroll (Insite X68000 p197)
+#define CRTC_R20  (0xE80028)                    // CRTC R20 (Inside X68000 p234)
+#define VDC_R1    (0xE82400)                    // video controller (Inside X68000 p234)
+#define VDC_R2    (0xE82600)                    // video controller (Inside X68000 p210)
+#define PALETTE   (0xE82000)                    // graphic palette (Inside X68000 p218)
+#define GPIP      (0xE88001)                    // generic I/O port (Inside X68000 p81)
+#define SYSP      (0xE8E007)                    // system port (Inside/Out X68030 p44)
+#define SCON      (0xEB080A)                    // sprite controller (Inside X68000 p235)
 
 // screen mode
 #define SCREEN_MODE_384x256         (0)
