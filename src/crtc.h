@@ -11,7 +11,7 @@
 #define PALETTE     ((volatile unsigned short*)0xE82000)     // graphic palette (Inside X68000 p218)
 #define GPIP         ((volatile unsigned char*)0xE88001)     // generic I/O port (Inside X68000 p81)
 #define SYSP         ((volatile unsigned char*)0xE8E007)     // system port (Inside/Out X68030 p44)
-#define SCON         ((volatile unsigned char*)0xEB080A)     // sprite controller (Inside X68000 p235)
+#define SCON        ((volatile unsigned short*)0xEB080A)     // sprite controller (Inside X68000 p235)
 
 // screen mode
 #define SCREEN_MODE_384x256         (0)
