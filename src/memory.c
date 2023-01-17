@@ -31,6 +31,7 @@ void free_himem(void* ptr) {
     TRAP15(&in_regs, &out_regs);
 }
 
+/*
 int getsize_himem(int mode) {
 
     struct REGS in_regs = { 0 };
@@ -43,6 +44,7 @@ int getsize_himem(int mode) {
   
     return (mode == 0) ? out_regs.d0 : out_regs.d1;
 }
+*/
 
 int resize_himem(void* ptr, size_t size) {
 

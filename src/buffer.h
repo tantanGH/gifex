@@ -1,5 +1,5 @@
-#ifndef __H_BUILD__
-#define __H_BUILD__
+#ifndef __H_BUFFER__
+#define __H_BUFFER__
 
 #include <stdio.h>
 #include <string.h>

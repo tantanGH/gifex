@@ -19,7 +19,7 @@
 #include "lzw.h"
 #include "gif.h"
 
-#define VERSION "0.4.0"
+#define VERSION "0.4.1"
 //#define DEBUG
 
 // global variables (flags)
@@ -845,7 +845,7 @@ int main(int argc, char* argv[]) {
         }
       } else if (argv[i][1] == 'b') {
         g_buffer_memory_size_factor = atoi(argv[i]+2);
-        if (g_buffer_memory_size_factor > 16) {
+        if (g_buffer_memory_size_factor > 32) {
           printf("error: too large memory factor.\n");
           return 1;
         }

@@ -8,7 +8,6 @@
 // high memory ops
 void* malloc_himem(size_t size);
 void free_himem(void* ptr);
-int getsize_himem(int mode);
 int resize_himem(void* ptr, size_t size);
 
 // main memory ops
