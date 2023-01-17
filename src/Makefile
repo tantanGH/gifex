@@ -32,7 +32,7 @@ CFLAGS = $(COMMON_FLAGS) -Wno-builtin-declaration-mismatch -fcall-used-d2 -fcall
 	-D__XDEV68K__
 
 # *.c ソースファイル
-C_SRCS = memory.c buffer.c lzw.c crtc.c main.c
+C_SRCS = memory.c buffer.c lzw.c gif.c main.c
 
 # *.s ソースファイル
 ASM_SRCS = 
@@ -57,7 +57,7 @@ OBJS =	$(addprefix $(INTERMEDIATE_DIR)/,$(patsubst %.c,%.o,$(C_SRCS))) \
 HLK_LINK_LIST = $(INTERMEDIATE_DIR)/_lk_list.tmp
 
 # Distribution package 
-PACKAGE_FILE = ../GIFEX040.ZIP
+PACKAGE_FILE = ../GIFEX050.ZIP
 
 # Document file
 DOCUMENT_FILE = GIFEX.DOC
