@@ -91,11 +91,11 @@ typedef struct {
 } GIF_APPLICATION_EXTENSION;
 
 typedef struct {
-  int image_index;
+//  int image_index;
   int bg_color_index;
-  unsigned short* global_color_table_ptr;
   GIF_GRAPHIC_CONTROL_EXTENSION graphic_ctrl_ext;
   GIF_IMAGE_BLOCK image_block;
+  unsigned short* global_color_table_ptr;
   unsigned short local_color_table[256];
   int frame_data_size;
   unsigned char* frame_data_ptr;
@@ -126,6 +126,22 @@ typedef struct {
   // high memory use
   int use_high_memory;
 
+  // memory cache mode
+  int memory_cache_mode;
+
+  // loop mode
+  int loop_mode;
+
+  // screen mode
+  int screen_mode;
+
+  // clear screen flag
+  int clear_screen;
+
+  // display width/height
+  int display_width;
+  int display_height;
+
   // actual screen width/height
   int actual_screen_width;
   int actual_screen_height;
@@ -138,6 +154,9 @@ typedef struct {
   unsigned short* rgb555_r;
   unsigned short* rgb555_g;
   unsigned short* rgb555_b;
+
+  // global color table
+  unsigned short global_color_table[ 256 ];
 
   // image frames
   int image_frame_count;

@@ -10,53 +10,10 @@
 #include <doslib.h>
 #include <iocslib.h>
 
+#include "crtc.h"
 #include "gif.h"
 
-#define VERSION "0.5.0b1"
-//#define DEBUG
-
-// global variables (flags)
-//int g_clear_screen = 0;                 // 1:clear screen by picture
-//int g_information_mode = 0;             // 1:show PNG file information
-//int g_centering_mode = 0;               // 1:centering yes
-//int g_key_wait_mode = 0;                // 1:wait key input
-//int g_brightness = 100;                 // 0-100% brightness
-//int g_memory_cache_mode = 0;            // 1:load all images to memory before animation
-//int g_high_memory_mode = 0;             // 1:use HIMEM for buffering
-//int g_screen_mode = 0;                  // 0:384x256 1:512x512 2:768x512(XEiJ extended graphic)
-//int g_image_index_limit = MAX_IMAGE_FRAMES;  // max image frames
-//int g_frame_rate = -1;                  // 0:no wait, n:n frames/sec, -1:auto
-
-// global variables (buffers)
-//int g_buffer_memory_size_factor = 8;    // in=64KB*factor, out=128KB*factor
-//int g_input_buffer_size = 65536 * 8;    // default input buffer size bytes
-//int g_output_buffer_size = 131072 * 8;  // default output buffer size bytes
-
-// global variables (states)
-//int g_actual_width = 0;                 // crop width
-//int g_actual_height = 0;                // crop height
-//int g_start_x = 0;                      // display offset X
-//int g_start_y = 0;                      // display offset Y
-
-// RGB888 to RGB555 mapping
-//unsigned short g_rgb555_r[256];
-//unsigned short g_rgb555_g[256];
-//unsigned short g_rgb555_b[256];
-
-// actual screen size
-//#define ACTUAL_WIDTH_EX  1024
-//#define ACTUAL_HEIGHT_EX 1024
-//#define ACTUAL_WIDTH      512
-//#define ACTUAL_HEIGHT     512
-
-/*
-//
-//  read bits from a byte (LSB to MSB)
-//
-inline static unsigned char read_bits(unsigned char byte_data, int bit_ofs, int bit_len) {
-  return ( byte_data >> bit_ofs ) & ( 0xff >> ( 8 - bit_len ));
-}
-*/
+#define VERSION "0.5.0"
 
 //
 //  show help messages
@@ -65,12 +22,12 @@ static void show_help_message() {
   printf("GIFEX - GIF image loader with XEiJ graphic extension support version " VERSION " by tantan 2023\n");
   printf("usage: gifex.x [options] <image.gif>\n");
   printf("options:\n");
-  printf("   -b<n> ... buffer memory size factor[1-32] (default:8)\n");
+  printf("   -b<n> ... buffer memory size factor[1-24] (default:4)\n");
   printf("   -c ... clear graphic screen\n");
   printf("   -f<n> ... max number of frames (default:no limit)\n");
   printf("   -h ... show this help message\n");
   printf("   -i ... show file information\n");
-  printf("   -k ... wait key input\n");
+  printf("   -l ... loop mode\n");
   printf("   -m ... memory cache mode\n");
   printf("   -n ... image centering\n");
   printf("   -o<x,y> ... display offset position\n");
@@ -88,6 +45,9 @@ int main(int argc, char* argv[]) {
   // return code
   int rc = 1;
 
+  // supervisor mode
+  B_SUPER(0);
+
   // preserve original function key mode
   int original_func_key_mode = C_FNKMOD(-1);
 
@@ -98,13 +58,11 @@ int main(int argc, char* argv[]) {
   static GIF_DECODE_HANDLE gif_decode_handle = { 0 };
   GIF_DECODE_HANDLE* gif = &gif_decode_handle;
   gif->image_frame_max = MAX_IMAGE_FRAMES;
+  gif->screen_mode = SCREEN_MODE_384x256;
+  gif->brightness = 100;
 
   // flags
-  int clear_screen = 0;
   int describe_mode = 0;
-  int key_wait = 0;
-  int memory_cache_mode = 0;
-  int screen_mode = 0;
   int buffer_size_factor = 4;
 
   // argument options
@@ -116,22 +74,20 @@ int main(int argc, char* argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' && strlen(argv[i]) >= 2) {
       if (argv[i][1] == 'c') {
-        clear_screen = 1;
-      } else if (argv[i][1] == 'i') {
-        describe_mode = 1;
+        gif->clear_screen = 1;
       } else if (argv[i][1] == 'n') {
         gif->centering = 1;
-      } else if (argv[i][1] == 'k') {
-        key_wait = 1;
+      } else if (argv[i][1] == 'l') {
+        gif->loop_mode = 1;
       } else if (argv[i][1] == 'm') {
-        memory_cache_mode = 1;
+        gif->memory_cache_mode = 1;
       } else if (argv[i][1] == 'u') {
         gif->use_high_memory = 1;        
       } else if (argv[i][1] == 'v' && strlen(argv[i]) >= 3) {
         gif->brightness = atoi(argv[i]+2);
       } else if (argv[i][1] == 's' && strlen(argv[i]) >= 3) {
-        screen_mode = atoi(argv[i]+2);
-        if (screen_mode < 0 || screen_mode > 3) {
+        gif->screen_mode = atoi(argv[i]+2);
+        if (gif->screen_mode < 0 || gif->screen_mode > 3) {
           printf("error: unknown screen mode.\n");
           goto exit;
         }
@@ -154,9 +110,11 @@ int main(int argc, char* argv[]) {
         } else {
           gif->offset_x = atoi(opt);
         }
+      } else if (argv[i][1] == 'i') {
+        describe_mode = 1;
       } else if (argv[i][1] == 'b' && strlen(argv[i]) >= 3) {
         buffer_size_factor = atoi(argv[i]+2);
-        if (buffer_size_factor > 32) {
+        if (buffer_size_factor > 24) {
           printf("error: too large memory factor.\n");
           return 1;
         }
@@ -178,14 +136,38 @@ int main(int argc, char* argv[]) {
   }
 
   // input buffer = 64KB * factor
-  gif->input_buffer_size = 65536 * buffer_size_factor;
+  gif->input_buffer_size = 32768 * buffer_size_factor;
 
   // output (inflate) buffer = 128KB * factor - should be LCM(3,4)*n to store RGB or RGBA tuple
-  gif->output_buffer_size = 131072 * buffer_size_factor;
+  gif->output_buffer_size = 65536 * buffer_size_factor;
 
-  // cropping window
-  gif->actual_screen_width = ( screen_mode == 3 ) ? 1024 : 512;
-  gif->actual_screen_height = ( screen_mode == 3 ) ? 768 : 512;
+  // display size
+  switch (gif->screen_mode) {
+    case 0:
+      gif->display_width = 384;
+      gif->display_height = 256;
+      gif->actual_screen_width = 512;
+      gif->actual_screen_height = 512;
+      break;
+    case 1:
+      gif->display_width = 512;
+      gif->display_height = 512;
+      gif->actual_screen_width = 512;
+      gif->actual_screen_height = 512;
+      break;
+    case 2:
+      gif->display_width = 768;
+      gif->display_height = 512;
+      gif->actual_screen_width = 512;
+      gif->actual_screen_height = 512;
+      break;
+    case 3:
+      gif->display_width = 768;
+      gif->display_height = 512;
+      gif->actual_screen_width = 1024;
+      gif->actual_screen_height = 1024;
+      break;
+  }
 
   // open GIF decode handle
   if (gif_open(gif, gif_file_name) != 0) {
@@ -201,16 +183,16 @@ int main(int argc, char* argv[]) {
   }
 
   // clear screen
-  if (clear_screen) {
+  if (gif->clear_screen) {
     G_CLR_ON();
+    C_CLS_AL();
   }
 
-/*
   // initialize graphic screen
-  initialize_screen(g_screen_mode);
+  initialize_screen(gif->screen_mode);
 
   // initialize palette (65536 colors)
-  initialize_palette(g_screen_mode);
+  initialize_palette(gif->screen_mode);
 
   // cursor display off
   C_CUROFF();
@@ -219,13 +201,13 @@ int main(int argc, char* argv[]) {
   C_FNKMOD(3);
 
   // load GIF image
-  gif_load(gif_file_name);
+  gif_load(gif);
 
   // reset system port
-  if (g_screen_mode == SCREEN_MODE_384x256) {
+  if (gif->screen_mode == SCREEN_MODE_384x256) {
     initialize_screen(SCREEN_MODE_768x512);
   }
-*/
+
   rc = 0;
 
 catch:
@@ -234,6 +216,11 @@ catch:
 
   // resume function key display mode
   C_FNKMOD(original_func_key_mode);
+
+  // flush key buffer
+  while (B_KEYSNS() != 0) {
+    B_KEYINP();
+  }
 
 exit:
   // close GIF decode handle

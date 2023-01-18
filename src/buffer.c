@@ -231,3 +231,33 @@ void buffer_reset(BUFFER_HANDLE* buf) {
   buf->rofs = 0;
   buf->wofs = 0;
 }
+
+//
+//  write offset rewind
+//
+void buffer_write_skip(BUFFER_HANDLE* buf, int len) {
+  buf->wofs += len;
+  if (buf->wofs < 0) buf->wofs = 0;
+  if (buf->wofs >= buf->buffer_size) buf->wofs = buf->buffer_size -1;
+}
+
+//
+//  return written size
+//
+int buffer_written_size(BUFFER_HANDLE* buf) {
+  return buf->wofs;
+}
+
+//
+//  return writable size
+//
+int buffer_writable_size(BUFFER_HANDLE* buf) {
+  return buf->buffer_size - buf->wofs;
+}
+
+//
+//  return buffer data pointer
+//
+unsigned char* buffer_data(BUFFER_HANDLE* buf) {
+  return buf->buffer_data;
+}

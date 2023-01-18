@@ -24,5 +24,10 @@ void buffer_read(BUFFER_HANDLE* buf, unsigned char* dest_ptr, int len);
 void buffer_write(BUFFER_HANDLE* buf, unsigned char* dest_ptr, int len);
 void buffer_skip(BUFFER_HANDLE* buf, int len);
 void buffer_reset(BUFFER_HANDLE* buf);
+void buffer_write_skip(BUFFER_HANDLE* buf, int len);
+int buffer_written_size(BUFFER_HANDLE* buf);
+int buffer_writable_size(BUFFER_HANDLE* buf);
+unsigned char* buffer_data(BUFFER_HANDLE* buf);
+
 
 #endif

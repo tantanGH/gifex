@@ -33,22 +33,7 @@ static void __free_himem(void* ptr) {
     TRAP15(&in_regs, &out_regs);
 }
 
-/*
-int getsize_himem(int mode) {
-
-    struct REGS in_regs = { 0 };
-    struct REGS out_regs = { 0 };
-
-    in_regs.d0 = 0xF8;      // IOCS _HIMEM
-    in_regs.d1 = 3;         // HIMEM_GETSIZE
-
-    TRAP15(&in_regs, &out_regs);
-  
-    return (mode == 0) ? out_regs.d0 : out_regs.d1;
-}
-*/
-
-int resize_himem(void* ptr, size_t size) {
+int __resize_himem(void* ptr, size_t size) {
 
     struct REGS in_regs = { 0 };
     struct REGS out_regs = { 0 };
@@ -76,6 +61,10 @@ static void __free_mainmem(void* ptr) {
   MFREE((int)ptr);
 }
 
+static int __resize_mainmem(void* ptr, size_t size) {
+  return SETBLOCK((int)ptr, size);
+}
+
 //
 //  generic memory operations
 //
@@ -89,4 +78,8 @@ void free_himem(void* ptr, int use_high_memory) {
     } else {
         __free_mainmem(ptr);
     }
+}
+
+int resize_himem(void* ptr, size_t size, int use_high_memory) {
+    return use_high_memory ? __resize_himem(ptr, size) : __resize_mainmem(ptr, size);
 }

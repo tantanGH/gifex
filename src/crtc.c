@@ -51,16 +51,16 @@ int initialize_screen(int mode) {
 
       }
 
-      SET_SYSP;                     // system port for dot clock change - Inside/Out p44
+      SET_SYSP;                 // system port for dot clock change - Inside/Out p44
 
       VDC_R1[0] = 3;            // memory mode 3
 
-      SCON[1] = 0x000b + 4;         // R02 + 4
+      SCON[1] = 0x000b + 4;     // R02 + 4
 
       WAIT_SCON;
-      SCON[0] = 0xff;               // 256 color mode: R00  else: 0xff
-      SCON[2] = 0x28;               // R06
-      SCON[3] = 0x11;               // R20 & 0xff
+      SCON[0] = 0xff;           // 256 color mode: R00  else: 0xff
+      SCON[2] = 0x28;           // R06
+      SCON[3] = 0x11;           // R20 & 0xff
 
       VDC_R2[0] = 0x2f;         // test/graphic on, sprite off (w:512 h:512)
 
@@ -112,7 +112,7 @@ int initialize_screen(int mode) {
 
       }
 
-      RESET_SYSP;                     // system port for dot clock change - Inside/Out p44
+      RESET_SYSP;                 // system port for dot clock change - Inside/Out p44
 
       VDC_R1[0] = 3;              // memory mode 3
 
