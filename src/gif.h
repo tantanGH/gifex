@@ -1,6 +1,8 @@
 #ifndef __H_GIF__
 #define __H_GIF__
 
+#include "buffer.h"
+
 // supportable max number of animated gif image frames
 #define MAX_IMAGE_FRAMES       (1024)
 
@@ -89,14 +91,85 @@ typedef struct {
 } GIF_APPLICATION_EXTENSION;
 
 typedef struct {
-  int image_index;
+//  int image_index;
   int bg_color_index;
-  unsigned short* global_color_table_ptr;
   GIF_GRAPHIC_CONTROL_EXTENSION graphic_ctrl_ext;
   GIF_IMAGE_BLOCK image_block;
+  unsigned short* global_color_table_ptr;
   unsigned short local_color_table[256];
   int frame_data_size;
   unsigned char* frame_data_ptr;
 } GIF_IMAGE_FRAME;
+
+typedef struct {
+
+  // file name
+  unsigned char* file_name;
+
+  // file handle
+  FILE* fp;
+
+  // brightness
+  int brightness;
+
+  // centering
+  int centering;
+
+  // input buffer
+  int input_buffer_size;
+  BUFFER_HANDLE* input_buffer;
+
+  // output buffer
+  int output_buffer_size;
+  unsigned char* output_buffer;
+
+  // high memory use
+  int use_high_memory;
+
+  // memory cache mode
+  int memory_cache_mode;
+
+  // loop mode
+  int loop_mode;
+
+  // screen mode
+  int screen_mode;
+
+  // clear screen flag
+  int clear_screen;
+
+  // display width/height
+  int display_width;
+  int display_height;
+
+  // actual screen width/height
+  int actual_screen_width;
+  int actual_screen_height;
+
+  // display offset
+  int offset_x;
+  int offset_y;
+
+  // RGB888 to RGB555 color map
+  unsigned short* rgb555_r;
+  unsigned short* rgb555_g;
+  unsigned short* rgb555_b;
+
+  // global color table
+  unsigned short global_color_table[ 256 ];
+
+  // image frames
+  int image_frame_count;
+  int image_frame_max;
+  int frame_rate;
+  GIF_IMAGE_FRAME* image_frames;
+
+} GIF_DECODE_HANDLE;
+
+// prototype declarations
+int gif_open(GIF_DECODE_HANDLE* gif, const unsigned char* file_name);
+void gif_close(GIF_DECODE_HANDLE* gif);
+int gif_load(GIF_DECODE_HANDLE* gif);
+int gif_describe(GIF_DECODE_HANDLE* gif);
 
 #endif
