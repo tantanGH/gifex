@@ -219,6 +219,13 @@ int main(int argc, char* argv[]) {
   rc = 0;
 
 catch:
+  // clear screen
+  if (gif->clear_screen) {
+    G_CLR_ON();
+    C_CLS_AL();
+    G_SCROLL(0,0);
+  }
+
   // cursor on
   C_CURON();
 
