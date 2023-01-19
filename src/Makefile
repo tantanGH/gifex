@@ -25,11 +25,11 @@ TARGET_FILE = GIFEX.X
 INCLUDE_FLAGS = -I${XDEV68K_DIR}/include/xc -I${XDEV68K_DIR}/include/xdev68k
 
 # コンパイルフラグ
-COMMON_FLAGS = -m68000 -Os $(INCLUDE_FLAGS) -z-stack=327680
+COMMON_FLAGS = -m68000 -Os $(INCLUDE_FLAGS) -z-stack=65536
 CFLAGS = $(COMMON_FLAGS) -Wno-builtin-declaration-mismatch -fcall-used-d2 -fcall-used-a2 \
     -fexec-charset=cp932 -fverbose-asm -fno-defer-pop \
-	-D__time_t_defined -D__clock_t_defined \
-	-D__XDEV68K__
+	  -D__time_t_defined -D__clock_t_defined \
+	  -D__XDEV68K__
 
 # *.c ソースファイル
 C_SRCS = memory.c crtc.c buffer.c lzw.c gif.c main.c
@@ -40,7 +40,6 @@ ASM_SRCS =
 # リンク対象のライブラリファイル
 LIBS =\
 	${XDEV68K_DIR}/lib/xc/CLIB.L \
-	${XDEV68K_DIR}/lib/xc/BASLIB.L \
 	${XDEV68K_DIR}/lib/xc/DOSLIB.L \
 	${XDEV68K_DIR}/lib/xc/IOCSLIB.L \
 	${XDEV68K_DIR}/lib/xc/FLOATFNC.L \
@@ -57,7 +56,7 @@ OBJS =	$(addprefix $(INTERMEDIATE_DIR)/,$(patsubst %.c,%.o,$(C_SRCS))) \
 HLK_LINK_LIST = $(INTERMEDIATE_DIR)/_lk_list.tmp
 
 # Distribution package 
-PACKAGE_FILE = ../GIFEX050.ZIP
+PACKAGE_FILE = ../GIFEX060.ZIP
 
 # Document file
 DOCUMENT_FILE = GIFEX.DOC

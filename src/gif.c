@@ -266,48 +266,31 @@ void output_image(GIF_DECODE_HANDLE* gif, int frame_id, int page) {
 
 // for vdisp handler
 static GIF_DECODE_HANDLE* g_gif;
+static volatile int g_frame_index;
 static volatile int g_vdisp_counter;
 static volatile int g_vdisp_interval;
+
+// for double buffering
 static volatile int g_buffer0_ready;
 static volatile int g_buffer1_ready;
 static volatile int g_current_page;
 
 //
-//  vdisp handler
+//  vdisp handler - double buffering
 //
-void __attribute__((interrupt)) vdisp_handler() {
-  if (g_vdisp_counter >= g_vdisp_interval) {
-    if (g_current_page < g_gif->image_frame_max) {
-      output_image(g_gif, g_current_page++, 0);
-    }
-    g_vdisp_counter = 0;
-  } else {
-    g_vdisp_counter++;
-  }
-}
-
-//
-//  vdisp handler (double buffering)  
-//
-void __attribute__((interrupt)) vdisp_handler_double_buffer() {
+static void __attribute__((interrupt)) vdisp_handler_double_buffering() {
 
   g_vdisp_counter++;
 
   if (g_vdisp_counter >= g_vdisp_interval) {
 
     if (g_current_page == 0 && g_buffer1_ready) {
-      CRTC_R12[1] = 256;            // scroll position Y
-      CRTC_R12[3] = 256;            // scroll position Y    
-      CRTC_R12[5] = 256;            // scroll position Y
-      CRTC_R12[7] = 256;            // scroll position Y
+      G_SCROLL(0,256);
       g_current_page = 1;
       g_buffer1_ready = 0;
       g_vdisp_counter = 0;
     } else if (g_current_page == 1 && g_buffer0_ready) {
-      CRTC_R12[1] = 0;            // scroll position Y
-      CRTC_R12[3] = 0;            // scroll position Y    
-      CRTC_R12[5] = 0;            // scroll position Y
-      CRTC_R12[7] = 0;            // scroll position Y
+      G_SCROLL(0,0);
       g_current_page = 0;
       g_buffer0_ready = 0;
       g_vdisp_counter = 0;
@@ -315,6 +298,20 @@ void __attribute__((interrupt)) vdisp_handler_double_buffer() {
 
   }
 
+}
+
+//
+//  vdisp handler - single buffering
+//
+static void __attribute__((interrupt)) vdisp_handler_single_buffering() {
+  if (g_vdisp_counter >= g_vdisp_interval) {
+    if (g_frame_index < g_gif->image_frame_max) {
+      output_image(g_gif, g_frame_index++, 0);
+    }
+    g_vdisp_counter = 0;
+  } else {
+    g_vdisp_counter++;
+  }
 }
 
 //
@@ -432,15 +429,14 @@ int gif_load(GIF_DECODE_HANDLE* gif) {
       break;
         
     } else if (block_type == IMAGE_SEPARATOR) {
-#ifdef DEBUG 
-      printf("image separator\n");
-#endif
+
       // GIF image block
       GIF_IMAGE_FRAME* ifr = &(gif->image_frames[ image_frame_index ]);
       GIF_IMAGE_BLOCK* ib = &(ifr->image_block);
       int end_of_image = 0;
 
       // copy header attributes
+      ifr->index = image_frame_index;
       ifr->bg_color_index = h->bg_color_index;
       ifr->global_color_table_ptr = ( h->flag_code & 0x80 ) ? &(gif->global_color_table[0]) : NULL;
 
@@ -476,9 +472,6 @@ int gif_load(GIF_DECODE_HANDLE* gif) {
       // read lzw minimum code size
       buffer_fill(gif->input_buffer, 1, 0);
       ib->lzw_min_code_size = buffer_get_uchar(gif->input_buffer);
-#ifdef DEBUG
-//        printf("lzw_min_code_size = %d\n", ib->lzw_min_code_size);
-#endif
 
       // reset buffer before starting to read sub blocks
       buffer_reset(gif->input_buffer);
@@ -494,22 +487,21 @@ int gif_load(GIF_DECODE_HANDLE* gif) {
         buffer_write_skip(gif->input_buffer, -1);
         buffer_skip(gif->input_buffer, -1);
 
-#ifdef DEBUG
-//        printf("sub_block_size = %d\n", sub_block_size);
-#endif
         if (sub_block_size == 0) {
+          // sub block size = 0 means image block end
           end_of_image = 1;
         } else if (sub_block_size > buffer_writable_size(gif->input_buffer)) {
           printf("error: sub block buffer memory overflow. (sub_block_size=%d, buffer_writable_size=%d)\n",sub_block_size, buffer_writable_size(gif->input_buffer));
           goto catch;
         } else {
+          // fill buffer with the block data
           buffer_fill(gif->input_buffer, sub_block_size, 0);
           buffer_skip(gif->input_buffer, sub_block_size);
         }
 
       } while (end_of_image == 0);
 
-      // ESC key check
+      // ESC key check for cancel
       if (BITSNS(0) & 0x02) {
         goto catch;
       }
@@ -532,20 +524,26 @@ int gif_load(GIF_DECODE_HANDLE* gif) {
 
       if (gif->memory_cache_mode) {
 
-      //  if (resize_himem(decode_buffer_ptr, decoded_size, gif->use_high_memory) == 0) {
-      //    // resize buffer memory
-      //    ifr->frame_data_ptr = decode_buffer_ptr;
-      //    ifr->frame_data_size = decoded_size;
-      //    decode_buffer_ptr = malloc_himem(decode_buffer_size, gif->use_high_memory); // reallocate buffer for next decode.
-      //  } else {
-          // if we cannot reallocate, allocate new buffer and copy
+        if (resize_himem(decode_buffer_ptr, decoded_size, gif->use_high_memory) == 0) {
+
+          // resized buffer memory
+          ifr->frame_data_ptr = decode_buffer_ptr;
+          ifr->frame_data_size = decoded_size;
+
+          // reallocate buffer for next decode
+          decode_buffer_ptr = malloc_himem(decode_buffer_size, gif->use_high_memory);
+
+        } else {
+
+          // if we cannot resize, allocate new buffer and copy
           ifr->frame_data_ptr = malloc_himem(decoded_size, gif->use_high_memory);
           if (ifr->frame_data_ptr == NULL) {
             printf("error: memory allocation error.\n");
             goto catch;
           }
           memcpy(ifr->frame_data_ptr, decode_buffer_ptr, decoded_size);
-      //  }
+
+        }
 
       } else {
 
@@ -747,45 +745,60 @@ int gif_load(GIF_DECODE_HANDLE* gif) {
     // if memory cache mode, play animation here using vsync interrupt
     if (end_of_gif == 1 && gif->memory_cache_mode) {
 
-#ifdef DEBUG
-      printf("memory cache operation is complete. now we play gif animation.\n");
-#endif
-      int delay_time = gif->image_frames[0].graphic_ctrl_ext.delay_time;
-      int vsync_count = 2;
-      
+      // support fixed interval only
+      GIF_GRAPHIC_CONTROL_EXTENSION* gce = &(gif->image_frames[0].graphic_ctrl_ext);
+      int delay_time = gce->delay_time;
+
+      int vsync_count = 12;   // default 5fps      
       if (gif->frame_rate > 0) {
         vsync_count = 60 / gif->frame_rate;
       } else if (delay_time > 0) {
         vsync_count = (int)((60.0 * delay_time) / 1000.0);
       }
-#ifdef DEBUG
-      printf("delay_time=%d,vsync_count=%d\n",delay_time,vsync_count);
-#endif
-      if (vsync_count < 2) vsync_count = 2;
+      if (vsync_count < 2) vsync_count = 2;   // max 30fps
 
-      if (gif->clear_screen) C_CLS_AL();
+      // clear text screen
+      if (gif->clear_screen) {
+        C_CLS_AL();
+      }
 
-      //CRTC_R12[1] = 0;            // scroll position Y
-      //CRTC_R12[3] = 0;            // scroll position Y    
-      //CRTC_R12[5] = 0;            // scroll position Y
-      //CRTC_R12[7] = 0;            // scroll position Y
+      // reset scroll position
+      WAIT_VBLANK;
+      G_SCROLL(0,0);
 
+      // global variables for vdisp handlers
       g_gif = gif;
+      g_frame_index = 0;
       g_vdisp_counter = 0;
       g_vdisp_interval = vsync_count;
+
+      // for double buffering
       g_buffer0_ready = 0;
       g_buffer1_ready = 0;
       g_current_page = 0;
 
+      // set vdisp interrupt handler
       WAIT_VBLANK;
       WAIT_VSYNC;
 
-      VDISPST((unsigned char*)vdisp_handler, 0, 1);
+      if (gif->screen_mode == SCREEN_MODE_384x256) {
+        // double buffering
+        VDISPST((unsigned char*)vdisp_handler_double_buffering, 0, 1);
+      } else {
+        // single buffering
+        VDISPST((unsigned char*)vdisp_handler_single_buffering, 0, 1);
+      }
 
       int loop = gif->loop_mode;
 
       do {
 
+        // reset frame index
+        g_frame_index = 0;
+
+        // for double buffering
+        g_buffer0_ready = 0;
+        g_buffer1_ready = 0;
         g_current_page = 0;
 
         do {
@@ -795,18 +808,21 @@ int gif_load(GIF_DECODE_HANDLE* gif) {
             loop = 0;
             break;
           }
-/*          
-          if ((i % 2) == 0 && g_current_page == 0 && g_buffer1_ready == 0) {
-            output_image(gif, i, 1);
-            g_buffer1_ready = 1;
-            i++;
-          } else if ((i % 2) == 1 && g_current_page == 1 && g_buffer0_ready == 0) {
-            output_image(gif, i, 0);
-            g_buffer0_ready = 1;
-            i++;
+          
+          // in double buffering mode, output image in the main thread
+          if (gif->screen_mode == SCREEN_MODE_384x256) {
+            if ((g_frame_index % 2) == 0 && g_current_page == 0 && g_buffer1_ready == 0) {
+              output_image(gif, g_frame_index, 1);
+              g_buffer1_ready = 1;
+              g_frame_index++;
+            } else if ((g_frame_index % 2) == 1 && g_current_page == 1 && g_buffer0_ready == 0) {
+              output_image(gif, g_frame_index, 0);
+              g_buffer0_ready = 1;
+              g_frame_index++;
+            }
           }
-*/
-        } while (g_current_page < gif->image_frame_count);
+
+        } while (g_frame_index < gif->image_frame_count);
 
       } while (loop);
 
@@ -815,18 +831,28 @@ int gif_load(GIF_DECODE_HANDLE* gif) {
 catch:
 
   // stop vdisp handler
+  WAIT_VSYNC;
   VDISPST(0, 0, 0);
 
-  // resume scroll position
-  //CRTC_R12[1] = 0;            // scroll position Y
-  //CRTC_R12[3] = 0;            // scroll position Y    
-  //CRTC_R12[5] = 0;            // scroll position Y
-  //CRTC_R12[7] = 0;            // scroll position Y
+  // reset scroll position
+  WAIT_VBLANK;
+  G_SCROLL(0,0);
 
   // reclaim decode buffer memory
   if (decode_buffer_ptr != NULL) {
       free_himem(decode_buffer_ptr, gif->use_high_memory);
       decode_buffer_ptr = NULL;
+  }
+
+  // reclaim image frame buffer memory
+  if (gif->memory_cache_mode) {
+    for (int i = 0; i < gif->image_frame_count; i++) {
+      GIF_IMAGE_FRAME* ifr = &(gif->image_frames[i]);
+      if (ifr->frame_data_ptr != NULL) {
+        free_himem(ifr->frame_data_ptr, gif->use_high_memory);
+        ifr->frame_data_ptr = NULL;
+      }
+    }
   }
 
   rc = 0;

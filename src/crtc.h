@@ -30,6 +30,9 @@
 // wait SCON write (not recommended)
 #define WAIT_SCON    for (int i = 0; i < 0x1000; i++) {}
 
+// scroll
+#define G_SCROLL(X,Y)   { CRTC_R12[0] = X; CRTC_R12[1] = Y; CRTC_R12[2] = X; CRTC_R12[3] = Y; CRTC_R12[4] = X; CRTC_R12[5] = Y; CRTC_R12[6] = X; CRTC_R12[7] = Y; }
+
 // prototype declarations
 int initialize_screen(int mode);
 int initialize_palette(int mode);
