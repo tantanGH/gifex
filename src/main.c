@@ -1,7 +1,14 @@
 //
-//  gifex.c - Animated GIF loader for X680x0 with XEiJ graphic extension support
+//  GIFEX.X - Animated GIF loader for X680x0
 //
-//  reference: https://www.tohoho-web.com/wwwgif.htm
+//  Implemented by tantan (@snakGH) 2022-2023
+//    https://github.com/tantanGH/gifex/
+//
+//  GIF data format reference by Tohoho
+//    https://www.tohoho-web.com/wwwgif.htm
+//
+//  GIF LZW decoder originated by miku in Typescript
+//    https://github.com/BaroqueEngine/GIFParser
 //
 
 #include <stdio.h>
@@ -13,7 +20,7 @@
 #include "crtc.h"
 #include "gif.h"
 
-#define VERSION "0.5.0"
+#define VERSION "0.6.0"
 
 //
 //  show help messages
@@ -186,6 +193,7 @@ int main(int argc, char* argv[]) {
   if (gif->clear_screen) {
     G_CLR_ON();
     C_CLS_AL();
+    G_SCROLL(0,0);
   }
 
   // initialize graphic screen

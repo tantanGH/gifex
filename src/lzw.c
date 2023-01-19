@@ -92,7 +92,7 @@ int decode_lzw(unsigned char* input_buffer, int input_len, unsigned char* output
       old_code = in_code;
 
       if (bits <= 0 && input_buffer_ofs >= input_len) {
-        break;    // no more bits to read
+        break;
       }
 
     }

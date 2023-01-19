@@ -91,7 +91,7 @@ typedef struct {
 } GIF_APPLICATION_EXTENSION;
 
 typedef struct {
-//  int image_index;
+  int index;
   int bg_color_index;
   GIF_GRAPHIC_CONTROL_EXTENSION graphic_ctrl_ext;
   GIF_IMAGE_BLOCK image_block;
