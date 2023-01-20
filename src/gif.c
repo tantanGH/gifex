@@ -3,6 +3,7 @@
 #include <string.h>
 #include <doslib.h>
 #include <iocslib.h>
+
 #include "gif.h"
 #include "buffer.h"
 #include "memory.h"
@@ -14,9 +15,9 @@
 //
 //  constructor
 //
-int gif_open(GIF_DECODE_HANDLE* gif, const unsigned char* file_name) {
+int32_t gif_open(GIF_DECODE_HANDLE* gif, const uint8_t* file_name) {
   
-  int rc = 1;
+  int32_t rc = 1;
 
   if (gif == NULL || file_name == NULL) goto exit;
 
@@ -45,11 +46,11 @@ int gif_open(GIF_DECODE_HANDLE* gif, const unsigned char* file_name) {
   gif->rgb555_b = malloc_himem(512, gif->use_high_memory);
 
   // initialize color map
-  for (int i = 0; i < 256; i++) {
-    unsigned int c = (int)(i * 32 * gif->brightness / 100) >> 8;
-    gif->rgb555_r[i] = (unsigned short)((c <<  6) + 1);
-    gif->rgb555_g[i] = (unsigned short)((c << 11) + 1);
-    gif->rgb555_b[i] = (unsigned short)((c <<  1) + 1);
+  for (int32_t i = 0; i < 256; i++) {
+    uint32_t c = (uint32_t)(i * 32 * gif->brightness / 100) >> 8;
+    gif->rgb555_r[i] = (uint16_t)((c <<  6) + 1);
+    gif->rgb555_g[i] = (uint16_t)((c << 11) + 1);
+    gif->rgb555_b[i] = (uint16_t)((c <<  1) + 1);
   }
 
   // input buffers
@@ -133,17 +134,17 @@ void gif_close(GIF_DECODE_HANDLE* gif) {
 //
 //  read bits from a byte (LSB to MSB)
 //
-inline static unsigned char read_bits(unsigned char byte_data, int bit_ofs, int bit_len) {
+inline static uint8_t read_bits(uint8_t byte_data, uint8_t bit_ofs, uint8_t bit_len) {
   return ( byte_data >> bit_ofs ) & ( 0xff >> ( 8 - bit_len ));
 }
 
 //
 //  describe GIF information
 //
-int gif_describe(GIF_DECODE_HANDLE* gif) {
+int32_t gif_describe(GIF_DECODE_HANDLE* gif) {
 
   // return code
-  int rc = 1;
+  int32_t rc = 1;
 
   if (gif == NULL) goto exit;
 
@@ -207,34 +208,34 @@ exit:
 //
 //  output image data to graphic vram
 //
-void output_image(GIF_DECODE_HANDLE* gif, int frame_id, int page) {
+void output_image(GIF_DECODE_HANDLE* gif, int32_t frame_id, int32_t page) {
   
   // image frame
   GIF_IMAGE_FRAME* ifr = &(gif->image_frames[ frame_id ]);
 
   // image frame attributes
-  unsigned char* buffer = ifr->frame_data_ptr;
-  unsigned char* buffer_end = buffer + ifr->frame_data_size;
-  unsigned short* global_palette = ifr->global_color_table_ptr;
+  uint8_t* buffer = ifr->frame_data_ptr;
+  uint8_t* buffer_end = buffer + ifr->frame_data_size;
+  uint16_t* global_palette = ifr->global_color_table_ptr;
   
   // image block attributes
   GIF_IMAGE_BLOCK* ib = &(ifr->image_block);
-  int width = ib->width, height = ib->height;
-  int offset_x = gif->offset_x + ib->left_position;
-  int offset_y = gif->offset_y + ib->top_position + page * 256;
-  int x = 0, y = 0;
-  unsigned short* palette = (ib->flag_code & 0x01) ? ifr->local_color_table : gif->global_color_table;
+  int16_t width = ib->width, height = ib->height;
+  int16_t offset_x = gif->offset_x + ib->left_position;
+  int16_t offset_y = gif->offset_y + ib->top_position + page * 256;
+  int16_t x = 0, y = 0;
+  uint16_t* palette = (ib->flag_code & 0x01) ? ifr->local_color_table : gif->global_color_table;
   
   // graphic control extension attributes
   GIF_GRAPHIC_CONTROL_EXTENSION* gce = &(ifr->graphic_ctrl_ext);
-  int transparent_index = (gce->flag_code & 0x01) ? gce->transparent_index : -1;
+  int16_t transparent_index = (gce->flag_code & 0x01) ? gce->transparent_index : -1;
   
   // gvram entry point
-  unsigned short* gvram = (unsigned short*)GVRAM + gif->actual_screen_width * offset_y + offset_x;
+  uint16_t* gvram = (uint16_t*)GVRAM + gif->actual_screen_width * offset_y + offset_x;
  
   while (buffer < buffer_end) {
 
-    unsigned char palette_code = *buffer++;
+    uint8_t palette_code = *buffer++;
 
     if ((offset_x + x) < gif->actual_screen_width) {
       if (transparent_index < 0 || palette_code != transparent_index) {
@@ -257,7 +258,7 @@ void output_image(GIF_DECODE_HANDLE* gif, int frame_id, int page) {
       x = 0;
       if (++y >= height) break;
       if ((offset_y + y) >= gif->actual_screen_height) break;  // Y cropping
-      gvram = (unsigned short*)GVRAM + gif->actual_screen_width * (offset_y + y) + offset_x;
+      gvram = (uint16_t*)GVRAM + gif->actual_screen_width * (offset_y + y) + offset_x;
     }
 
   }
@@ -266,14 +267,14 @@ void output_image(GIF_DECODE_HANDLE* gif, int frame_id, int page) {
 
 // for vdisp handler
 static GIF_DECODE_HANDLE* g_gif;
-static volatile int g_frame_index;
-static volatile int g_vdisp_counter;
-static volatile int g_vdisp_interval;
+static volatile int32_t g_frame_index;
+static volatile int32_t g_vdisp_counter;
+static volatile int32_t g_vdisp_interval;
 
 // for double buffering
-static volatile int g_buffer0_ready;
-static volatile int g_buffer1_ready;
-static volatile int g_current_page;
+static volatile int32_t g_buffer0_ready;
+static volatile int32_t g_buffer1_ready;
+static volatile int32_t g_current_page;
 
 //
 //  vdisp handler - double buffering
@@ -317,10 +318,10 @@ static void __attribute__((interrupt)) vdisp_handler_single_buffering() {
 //
 //  load GIF image
 //
-int gif_load(GIF_DECODE_HANDLE* gif) {
+int32_t gif_load(GIF_DECODE_HANDLE* gif) {
 
   // default return code
-  int rc = 1;
+  int32_t rc = 1;
 
   // decoder handle check
   if (gif == NULL) goto exit;
@@ -380,12 +381,12 @@ int gif_load(GIF_DECODE_HANDLE* gif) {
 
   // global palette
   if (read_bits(h->flag_code,7,1)) {
-    int gct_size = 1 << (1 + read_bits(h->flag_code,0,3));
+    int32_t gct_size = 1 << (1 + read_bits(h->flag_code,0,3));
     buffer_fill(gif->input_buffer, gct_size * 3, 0);
-    for (int i = 0; i < gct_size; i++) {
-      unsigned char r = buffer_get_uchar(gif->input_buffer);
-      unsigned char g = buffer_get_uchar(gif->input_buffer);
-      unsigned char b = buffer_get_uchar(gif->input_buffer);
+    for (int32_t i = 0; i < gct_size; i++) {
+      uint8_t r = buffer_get_uchar(gif->input_buffer);
+      uint8_t g = buffer_get_uchar(gif->input_buffer);
+      uint8_t b = buffer_get_uchar(gif->input_buffer);
       gif->global_color_table[i] = gif->rgb555_r[ r ] | gif->rgb555_g[ g ] | gif->rgb555_b[ b ] | 1;
     }
 #ifdef DEBUG
@@ -398,12 +399,12 @@ int gif_load(GIF_DECODE_HANDLE* gif) {
   }
 
   // for GIF parsing
-  int image_frame_index = 0;
-  int end_of_gif = 0;
+  int32_t image_frame_index = 0;
+  int32_t end_of_gif = 0;
 
   // temporary decode buffer
-  unsigned char* decode_buffer_ptr = NULL;
-  int decode_buffer_size = gif->output_buffer_size;
+  uint8_t* decode_buffer_ptr = NULL;
+  int32_t decode_buffer_size = gif->output_buffer_size;
 
   // decode buffer
   decode_buffer_ptr = malloc_himem(decode_buffer_size, gif->use_high_memory);
@@ -417,7 +418,7 @@ int gif_load(GIF_DECODE_HANDLE* gif) {
 
     // read first byte to identify block type
     buffer_fill(gif->input_buffer, 1, 0);
-    unsigned char block_type = buffer_get_uchar(gif->input_buffer);
+    uint8_t block_type = buffer_get_uchar(gif->input_buffer);
 
     if (block_type == GIF_TRAILOR) {
 
@@ -433,7 +434,7 @@ int gif_load(GIF_DECODE_HANDLE* gif) {
       // GIF image block
       GIF_IMAGE_FRAME* ifr = &(gif->image_frames[ image_frame_index ]);
       GIF_IMAGE_BLOCK* ib = &(ifr->image_block);
-      int end_of_image = 0;
+      int32_t end_of_image = 0;
 
       // copy header attributes
       ifr->index = image_frame_index;
@@ -459,12 +460,12 @@ int gif_load(GIF_DECODE_HANDLE* gif) {
 
       // local palette
       if (read_bits(ib->flag_code,7,1)) {
-        int lct_size = 1 << (1 + (read_bits(ib->flag_code,0,3)));
+        int32_t lct_size = 1 << (1 + (read_bits(ib->flag_code,0,3)));
         buffer_fill(gif->input_buffer, 3 * lct_size, 0);
-        for (int i = 0; i < lct_size; i++) {
-          unsigned char r = buffer_get_uchar(gif->input_buffer);
-          unsigned char g = buffer_get_uchar(gif->input_buffer);
-          unsigned char b = buffer_get_uchar(gif->input_buffer);
+        for (int32_t i = 0; i < lct_size; i++) {
+          uint8_t r = buffer_get_uchar(gif->input_buffer);
+          uint8_t g = buffer_get_uchar(gif->input_buffer);
+          uint8_t b = buffer_get_uchar(gif->input_buffer);
           ifr->local_color_table[i] = gif->rgb555_r[ r ] | gif->rgb555_g[ g ] | gif->rgb555_b[ b ] | 1;
         }
       }
@@ -481,7 +482,7 @@ int gif_load(GIF_DECODE_HANDLE* gif) {
 
         // get sub block size
         buffer_fill(gif->input_buffer, 1, 0);
-        unsigned char sub_block_size = buffer_get_uchar(gif->input_buffer);
+        uint8_t sub_block_size = buffer_get_uchar(gif->input_buffer);
 
         // rewind 
         buffer_write_skip(gif->input_buffer, -1);
@@ -507,14 +508,14 @@ int gif_load(GIF_DECODE_HANDLE* gif) {
       }
 
       // total number of pixels
-      int pixel_count = (ib->width) * (ib->height);
+      size_t pixel_count = (ib->width) * (ib->height);
 
       // decode LZW bit stream
-      int decoded_size = decode_lzw(buffer_data(gif->input_buffer), 
-                                    buffer_written_size(gif->input_buffer),
-                                    decode_buffer_ptr, 
-                                    ib->lzw_min_code_size, 
-                                    pixel_count);
+      size_t decoded_size = decode_lzw(buffer_data(gif->input_buffer), 
+                                       buffer_written_size(gif->input_buffer),
+                                       decode_buffer_ptr, 
+                                       ib->lzw_min_code_size, 
+                                       pixel_count);
 #ifdef DEBUG
       printf("frame data size = %d, buffer written size = %d\n", decoded_size, buffer_written_size(gif->input_buffer));
 #endif
@@ -548,8 +549,8 @@ int gif_load(GIF_DECODE_HANDLE* gif) {
       } else {
 
         // incremental mode
-        int delay_time = ifr->graphic_ctrl_ext.delay_time;
-        int vsync_count = 2;
+        int32_t delay_time = ifr->graphic_ctrl_ext.delay_time;
+        int32_t vsync_count = 2;
 
 #ifdef DEBUG
         printf("delay_time=%d\n",delay_time);
@@ -574,7 +575,7 @@ int gif_load(GIF_DECODE_HANDLE* gif) {
           break;
         }
 
-        for (int i = 0; i < vsync_count; i++) {
+        for (int32_t i = 0; i < vsync_count; i++) {
           WAIT_VBLANK;
         }
 
@@ -604,7 +605,7 @@ int gif_load(GIF_DECODE_HANDLE* gif) {
     } else if (block_type == EXTENSION_INTRODUCER) {
 
       buffer_fill(gif->input_buffer, 2, 0);   // extension label (1) + block size (1)
-      unsigned char extension_label = buffer_get_uchar(gif->input_buffer);
+      uint8_t extension_label = buffer_get_uchar(gif->input_buffer);
 
       if (extension_label == GRAPHIC_CONTROL_LABEL) {
 
@@ -747,9 +748,9 @@ int gif_load(GIF_DECODE_HANDLE* gif) {
 
       // support fixed interval only
       GIF_GRAPHIC_CONTROL_EXTENSION* gce = &(gif->image_frames[0].graphic_ctrl_ext);
-      int delay_time = gce->delay_time;
+      int32_t delay_time = gce->delay_time;
 
-      int vsync_count = 12;   // default 5fps      
+      int32_t vsync_count = 12;   // default 5fps      
       if (gif->frame_rate > 0) {
         vsync_count = 60 / gif->frame_rate;
       } else if (delay_time > 0) {
@@ -789,7 +790,7 @@ int gif_load(GIF_DECODE_HANDLE* gif) {
         VDISPST((unsigned char*)vdisp_handler_single_buffering, 0, 1);
       }
 
-      int loop = gif->loop_mode;
+      int32_t loop = gif->loop_mode;
 
       do {
 
@@ -846,7 +847,7 @@ catch:
 
   // reclaim image frame buffer memory
   if (gif->memory_cache_mode) {
-    for (int i = 0; i < gif->image_frame_count; i++) {
+    for (int32_t i = 0; i < gif->image_frame_count; i++) {
       GIF_IMAGE_FRAME* ifr = &(gif->image_frames[i]);
       if (ifr->frame_data_ptr != NULL) {
         free_himem(ifr->frame_data_ptr, gif->use_high_memory);

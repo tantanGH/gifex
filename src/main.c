@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <doslib.h>
 #include <iocslib.h>
@@ -20,13 +21,13 @@
 #include "crtc.h"
 #include "gif.h"
 
-#define VERSION "0.6.0"
+#define VERSION "0.7.0"
 
 //
 //  show help messages
 //
 static void show_help_message() {
-  printf("GIFEX - GIF image loader with XEiJ graphic extension support version " VERSION " by tantan 2023\n");
+  printf("GIFEX - GIF image loader with XEiJ graphic extension support version " VERSION " by tantan 2022-2023\n");
   printf("usage: gifex.x [options] <image.gif>\n");
   printf("options:\n");
   printf("   -b<n> ... buffer memory size factor[1-24] (default:4)\n");
@@ -47,19 +48,19 @@ static void show_help_message() {
 //
 //  main
 //
-int main(int argc, char* argv[]) {
+int32_t main(int32_t argc, uint8_t* argv[]) {
 
   // return code
-  int rc = 1;
+  int32_t rc = 1;
 
   // supervisor mode
   B_SUPER(0);
 
   // preserve original function key mode
-  int original_func_key_mode = C_FNKMOD(-1);
+  int32_t original_func_key_mode = C_FNKMOD(-1);
 
   // GIF file name
-  char* gif_file_name = NULL;
+  uint8_t* gif_file_name = NULL;
 
   // GIF decode handle
   static GIF_DECODE_HANDLE gif_decode_handle = { 0 };
@@ -69,8 +70,8 @@ int main(int argc, char* argv[]) {
   gif->brightness = 100;
 
   // flags
-  int describe_mode = 0;
-  int buffer_size_factor = 4;
+  int32_t describe_mode = 0;
+  int32_t buffer_size_factor = 4;
 
   // argument options
   if (argc <= 1) {
@@ -78,7 +79,7 @@ int main(int argc, char* argv[]) {
     goto exit;
   }
 
-  for (int i = 1; i < argc; i++) {
+  for (int32_t i = 1; i < argc; i++) {
     if (argv[i][0] == '-' && strlen(argv[i]) >= 2) {
       if (argv[i][1] == 'c') {
         gif->clear_screen = 1;
@@ -109,7 +110,7 @@ int main(int argc, char* argv[]) {
       } else if (argv[i][1] == 'o' && strlen(argv[i]) >= 5) {
         static char opt[64];
         strcpy(opt,argv[i]+2);
-        char* c = strchr(opt,',');
+        uint8_t* c = strchr(opt,',');
         if (c != NULL) {
           *c = '\0';
           gif->offset_x = atoi(opt);
