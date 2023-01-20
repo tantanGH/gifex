@@ -42,7 +42,7 @@ GIFフォーマットの仕様について、以下を参考にさせて頂き�
 
 * [とほほのWWW入門・GIFフォーマットの詳細](https://www.tohoho-web.com/wwwgif.htm)
 
-GIFフォーマットのLZWでコードについて、以下の実装をCにコンバートして利用させて頂きました。(ライセンスMIT)
+GIFフォーマットのLZWデコードについて、以下の実装をCにコンバートして利用させて頂きました。(ライセンスMIT)
 今まで見た中でおそらく最も美しいGIF LZWデコードの実装だと思います。
 
 * [https://github.com/BaroqueEngine/GIFParser](https://github.com/BaroqueEngine/GIFParser)
