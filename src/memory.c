@@ -1,3 +1,5 @@
+#include <stdint.h>
+#include <stddef.h>
 #include <iocslib.h>
 #include <doslib.h>
 #include "memory.h"
@@ -14,7 +16,7 @@ static void* __malloc_himem(size_t size) {
 
     TRAP15(&in_regs, &out_regs);
 
-    int rc = out_regs.d0;
+    uint32_t rc = out_regs.d0;
 
     return (rc == 0) ? (void*)out_regs.a1 : NULL;
 }
@@ -50,28 +52,28 @@ int __resize_himem(void* ptr, size_t size) {
 
 // allocate main memory
 static void* __malloc_mainmem(size_t size) {
-  int addr = MALLOC(size);
-  return (addr >= 0x81000000) ? NULL : (char*)addr;
+  uint32_t addr = MALLOC(size);
+  return (addr >= 0x81000000) ? NULL : (void*)addr;
 }
 
 // free main memory
 static void __free_mainmem(void* ptr) {
   if (ptr == NULL) return;
-  MFREE((int)ptr);
+  MFREE((uint32_t)ptr);
 }
 
 // resize main memory
-static int __resize_mainmem(void* ptr, size_t size) {
-  return SETBLOCK((int)ptr, size);
+static int32_t __resize_mainmem(void* ptr, size_t size) {
+  return SETBLOCK((uint32_t)ptr, size);
 }
 
 // allocate memory
-void* malloc_himem(size_t size, int use_high_memory) {
+void* malloc_himem(size_t size, int32_t use_high_memory) {
     return use_high_memory ? __malloc_himem(size) : __malloc_mainmem(size);
 }
 
 // free memory
-void free_himem(void* ptr, int use_high_memory) {
+void free_himem(void* ptr, int32_t use_high_memory) {
     if (use_high_memory) {
         __free_himem(ptr);
     } else {
@@ -80,6 +82,6 @@ void free_himem(void* ptr, int use_high_memory) {
 }
 
 // resize memory
-int resize_himem(void* ptr, size_t size, int use_high_memory) {
+int32_t resize_himem(void* ptr, size_t size, int32_t use_high_memory) {
     return use_high_memory ? __resize_himem(ptr, size) : __resize_mainmem(ptr, size);
 }

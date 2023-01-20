@@ -1,17 +1,19 @@
 #ifndef __H_CRTC__
 #define __H_CRTC__
 
+#include <stdint.h>
+
 // graphic ops memory addresses
-#define GVRAM       ((volatile unsigned short*)0xC00000)     // GVRAM
-#define CRTC_R00    ((volatile unsigned short*)0xE80000)     // CRTC R00-R08 (Inside X68000 p232)
-#define CRTC_R12    ((volatile unsigned short*)0xE80018)     // CRTC R12 for scroll (Insite X68000 p197)
-#define CRTC_R20    ((volatile unsigned short*)0xE80028)     // CRTC R20 (Inside X68000 p234)
-#define VDC_R1      ((volatile unsigned short*)0xE82400)     // video controller (Inside X68000 p234)
-#define VDC_R2      ((volatile unsigned short*)0xE82600)     // video controller (Inside X68000 p210)
-#define PALETTE     ((volatile unsigned short*)0xE82000)     // graphic palette (Inside X68000 p218)
-#define GPIP         ((volatile unsigned char*)0xE88001)     // generic I/O port (Inside X68000 p81)
-#define SYSP         ((volatile unsigned char*)0xE8E007)     // system port (Inside/Out X68030 p44)
-#define SCON        ((volatile unsigned short*)0xEB080A)     // sprite controller (Inside X68000 p235)
+#define GVRAM       ((volatile uint16_t*)0xC00000)     // GVRAM
+#define CRTC_R00    ((volatile uint16_t*)0xE80000)     // CRTC R00-R08 (Inside X68000 p232)
+#define CRTC_R12    ((volatile uint16_t*)0xE80018)     // CRTC R12 for scroll (Insite X68000 p197)
+#define CRTC_R20    ((volatile uint16_t*)0xE80028)     // CRTC R20 (Inside X68000 p234)
+#define VDC_R0      ((volatile uint16_t*)0xE82400)     // video controller (Inside X68000 p234)
+#define VDC_R2      ((volatile uint16_t*)0xE82600)     // video controller (Inside X68000 p210)
+#define PALETTE     ((volatile uint16_t*)0xE82000)     // graphic palette (Inside X68000 p218)
+#define GPIP         ((volatile uint8_t*)0xE88001)     // generic I/O port (Inside X68000 p81)
+#define SYSP         ((volatile uint8_t*)0xE8E007)     // system port (Inside/Out X68030 p44)
+#define SCON        ((volatile uint16_t*)0xEB080A)     // sprite controller (Inside X68000 p235)
 
 // screen mode
 #define SCREEN_MODE_384x256         (0)
@@ -34,7 +36,7 @@
 #define G_SCROLL(X,Y)   { CRTC_R12[0] = X; CRTC_R12[1] = Y; CRTC_R12[2] = X; CRTC_R12[3] = Y; CRTC_R12[4] = X; CRTC_R12[5] = Y; CRTC_R12[6] = X; CRTC_R12[7] = Y; }
 
 // prototype declarations
-int initialize_screen(int mode);
-int initialize_palette(int mode);
+int32_t initialize_screen(int32_t mode);
+int32_t initialize_palette(int32_t mode);
 
 #endif

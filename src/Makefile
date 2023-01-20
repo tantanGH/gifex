@@ -37,6 +37,9 @@ C_SRCS = memory.c crtc.c buffer.c lzw.c gif.c main.c
 # *.s ソースファイル
 ASM_SRCS = 
 
+# *.h source files
+HEADER_SRCS = buffer.h crtc.h gif.h lzw.h memory.h
+
 # リンク対象のライブラリファイル
 LIBS =\
 	${XDEV68K_DIR}/lib/xc/CLIB.L \
@@ -56,7 +59,7 @@ OBJS =	$(addprefix $(INTERMEDIATE_DIR)/,$(patsubst %.c,%.o,$(C_SRCS))) \
 HLK_LINK_LIST = $(INTERMEDIATE_DIR)/_lk_list.tmp
 
 # Distribution package 
-PACKAGE_FILE = ../GIFEX060.ZIP
+PACKAGE_FILE = ../GIFEX070.ZIP
 
 # Document file
 DOCUMENT_FILE = GIFEX.DOC
@@ -86,7 +89,7 @@ ${INTERMEDIATE_DIR}/$(TARGET_FILE) : $(OBJS)
 	$(HLK) -i $(HLK_LINK_LIST) -o ${INTERMEDIATE_DIR}/$(TARGET_FILE)
 
 # *.c ソースのコンパイル
-$(INTERMEDIATE_DIR)/%.o : %.c Makefile
+$(INTERMEDIATE_DIR)/%.o : %.c Makefile $(HEADER_SRCS)
 	mkdir -p $(INTERMEDIATE_DIR)
 	$(CC) -S $(CFLAGS) -o $(INTERMEDIATE_DIR)/$*.m68k-gas.s $<
 	$(GAS2HAS) -i $(INTERMEDIATE_DIR)/$*.m68k-gas.s -o $(INTERMEDIATE_DIR)/$*.s

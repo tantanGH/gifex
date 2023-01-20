@@ -3,10 +3,10 @@
 //
 //  initialize screen
 //
-int initialize_screen(int mode) {
+int32_t initialize_screen(int32_t mode) {
 
   // return code
-  int rc = -1;
+  int32_t rc = -1;
 
   // wait vblank
   WAIT_VSYNC;
@@ -18,7 +18,7 @@ int initialize_screen(int mode) {
     case SCREEN_MODE_384x256: {
 
       // 512x256(384x256),31kHz,65536 colors
-      int current_resolution = CRTC_R20[0] & 0x013;
+      int32_t current_resolution = CRTC_R20[0] & 0x013;
       if (current_resolution > 0x11) {
 
         CRTC_R20[0] = 0x311;    // set first
@@ -53,14 +53,14 @@ int initialize_screen(int mode) {
 
       SET_SYSP;                 // system port for dot clock change - Inside/Out p44
 
-      VDC_R1[0] = 3;            // memory mode 3
+      VDC_R0[0] = 3;            // memory mode 3
 
-      SCON[1] = 0x000b + 4;     // R02 + 4
+//      SCON[1] = 0x000b + 4;   // R02 + 4
 
-      WAIT_SCON;
-      SCON[0] = 0xff;           // 256 color mode: R00  else: 0xff
-      SCON[2] = 0x28;           // R06
-      SCON[3] = 0x11;           // R20 & 0xff
+//      WAIT_SCON;
+//      SCON[0] = 0xff;         // 256 color mode: R00  else: 0xff
+//      SCON[2] = 0x28;         // R06
+//      SCON[3] = 0x11;         // R20 & 0xff
 
       VDC_R2[0] = 0x2f;         // test/graphic on, sprite off (w:512 h:512)
 
@@ -80,7 +80,7 @@ int initialize_screen(int mode) {
     case SCREEN_MODE_512x512: {
 
       // 512x512(512x512),31kHz,65536 colors
-      int current_resolution = CRTC_R20[0] & 0x013;
+      int32_t current_resolution = CRTC_R20[0] & 0x013;
       if (current_resolution > 0x15) {
 
         CRTC_R20[0] = 0x315;      // set last
@@ -114,14 +114,14 @@ int initialize_screen(int mode) {
 
       RESET_SYSP;                 // system port for dot clock change - Inside/Out p44
 
-      VDC_R1[0] = 3;              // memory mode 3
+      VDC_R0[0] = 3;              // memory mode 3
 
-//      SCON[1] = 0x0011 + 4;           // R02 + 4
+//      SCON[1] = 0x0011 + 4;     // R02 + 4
 
 //      WAIT_SCON;
-//      SCON[0] = 0xff;                 // 256 color: R00  else: 0xff
-//      SCON[2] = 0x28;                 // R06
-//      SCON[3] = 0x15;                 // R20 & 0xff
+//      SCON[0] = 0xff;           // 256 color: R00  else: 0xff
+//      SCON[2] = 0x28;           // R06
+//      SCON[3] = 0x15;           // R20 & 0xff
 
       VDC_R2[0] = 0x2f;           // text/graphic on, sprite off (w:512 h:512)
 
@@ -141,7 +141,7 @@ int initialize_screen(int mode) {
     case SCREEN_MODE_768x512: {
 
       // 512x512(768x512),31kHz,65536 colros
-      int current_resolution = CRTC_R20[0] & 0x013;
+      int32_t current_resolution = CRTC_R20[0] & 0x013;
       if (current_resolution > 0x16) {
 
         CRTC_R20[0] = 0x316;      // set first
@@ -176,14 +176,14 @@ int initialize_screen(int mode) {
 
       RESET_SYSP;                 // system port for dot clock change - Inside/Out p44
 
-      VDC_R1[0] = 3;              // memory mode 3
+      VDC_R0[0] = 3;              // memory mode 3
 
 //      SCON[1] = 0x001c + 4;
 
 //      WAIT_SCON;
-//      SCON[0] = 0xff;                 // 256 color: R00  else: 0xff
-//      SCON[2] = 0x28;                 // R06
-//      SCON[3] = 0x16;                 // R20 & 0xff
+//      SCON[0] = 0xff;           // 256 color: R00  else: 0xff
+//      SCON[2] = 0x28;           // R06
+//      SCON[3] = 0x16;           // R20 & 0xff
 
       VDC_R2[0] = 0x2f;           // text/graphic on, sprite off (w:512 h:512)
 
@@ -218,14 +218,14 @@ int initialize_screen(int mode) {
 
       RESET_SYSP;                 // system port for dot clock change - Inside/Out p44
 
-      VDC_R1[0] = 7;              // memory mode 7 (for XEiJ only)
+      VDC_R0[0] = 7;              // memory mode 7 (for XEiJ only)
   
-//      SCON[1] = 0x001c + 4;           // R02 + 0x04
+//      SCON[1] = 0x001c + 4;     // R02 + 0x04
 
 //      WAIT_SCON;
-//      SCON[0] = 0xff;                 // 256 color: R00  else: 0xff
-//      SCON[2] = 0x28;                 // R06
-//      SCON[3] = 0x16;                 // R20 & 0xff
+//      SCON[0] = 0xff;           // 256 color: R00  else: 0xff
+//      SCON[2] = 0x28;           // R06
+//      SCON[3] = 0x16;           // R20 & 0xff
 
       VDC_R2[0] = 0x30;           // text/graphic on (w:1024 h:1024)
 
@@ -246,19 +246,19 @@ int initialize_screen(int mode) {
 }
 
 // initialize 65536 color pallet
-int initialize_palette(int mode) {
+int32_t initialize_palette(int32_t mode) {
 
-  volatile unsigned short* palette_ptr = PALETTE;
-  int rc = -1;
+  volatile uint16_t* palette_ptr = PALETTE;
+  int32_t rc = -1;
 
   switch (mode) {
     case SCREEN_MODE_384x256:
     case SCREEN_MODE_512x512:
     case SCREEN_MODE_768x512:
     case SCREEN_MODE_768x512_FULL:
-      for (int i = 0x0001; i <= 0x10000; i += 0x0202) {
-        *palette_ptr++ = (unsigned short)i;
-        *palette_ptr++ = (unsigned short)i;
+      for (int32_t i = 0x0001; i <= 0x10000; i += 0x0202) {
+        *palette_ptr++ = (uint16_t)i;
+        *palette_ptr++ = (uint16_t)i;
       }
       rc = 0;
       break;

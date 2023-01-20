@@ -1,6 +1,7 @@
 #ifndef __H_GIF__
 #define __H_GIF__
 
+#include <stdint.h>
 #include "buffer.h"
 
 // supportable max number of animated gif image frames
@@ -17,159 +18,159 @@
 
 // GIF header
 typedef struct {
-  char signature[4];
-  char version[4];
-  unsigned short screen_width;
-  unsigned short screen_height;
-  unsigned char flag_code;
-  unsigned char bg_color_index;
-  unsigned char aspect_ratio;
-  //unsigned char global_color_table[];
+  uint8_t signature[4];
+  uint8_t version[4];
+  uint16_t screen_width;
+  uint16_t screen_height;
+  uint8_t flag_code;
+  uint8_t bg_color_index;
+  uint8_t aspect_ratio;
+  //uint8_t global_color_table[];
 } GIF_HEADER;
 
 // GIF image block header
 typedef struct {
-  unsigned char separator;
-  unsigned short left_position;
-  unsigned short top_position;
-  unsigned short width;
-  unsigned short height;
-  unsigned char flag_code;
-//  unsigned char* local_color_table;
-  unsigned char lzw_min_code_size;
-//  unsigned char* image_data;
+  uint8_t separator;
+  uint16_t left_position;
+  uint16_t top_position;
+  uint16_t width;
+  uint16_t height;
+  uint8_t flag_code;
+//  uint8_t* local_color_table;
+  uint8_t lzw_min_code_size;
+//  uint8_t* image_data;
 } GIF_IMAGE_BLOCK;
 
 // GIF graphic control extension
 typedef struct {
-  unsigned char introducer;
-  unsigned char label;
-  unsigned char block_size;
-  unsigned char flag_code;
-  unsigned short delay_time;
-  unsigned char transparent_index;
-  unsigned char terminator;
+  uint8_t introducer;
+  uint8_t label;
+  uint8_t block_size;
+  uint8_t flag_code;
+  uint16_t delay_time;
+  uint8_t transparent_index;
+  uint8_t terminator;
 } GIF_GRAPHIC_CONTROL_EXTENSION;
 
 // GIF comment extension
 typedef struct {
-  unsigned char introducer;
-  unsigned char label;
-  unsigned char block_size;
-  unsigned char* comment_data;
-  unsigned char terminator;
+  uint8_t introducer;
+  uint8_t label;
+  uint8_t block_size;
+  uint8_t* comment_data;
+  uint8_t terminator;
 } GIF_COMMENT_EXTENSION;
 
 // GIF plain text extension
 typedef struct {
-  unsigned char introducer;
-  unsigned char label;
-  unsigned char block_size;
-  unsigned short text_grid_left_position;
-  unsigned short text_grid_top_position;
-  unsigned short text_grid_width;
-  unsigned short text_grid_height;
-  unsigned char character_cell_width;
-  unsigned char character_cell_height;
-  unsigned char text_fg_color_index;
-  unsigned char text_bg_color_index;
-  unsigned char block_size2;
-  unsigned char* plain_text_data;
-  unsigned char terminator;
+  uint8_t introducer;
+  uint8_t label;
+  uint8_t block_size;
+  uint16_t text_grid_left_position;
+  uint16_t text_grid_top_position;
+  uint16_t text_grid_width;
+  uint16_t text_grid_height;
+  uint8_t character_cell_width;
+  uint8_t character_cell_height;
+  uint8_t text_fg_color_index;
+  uint8_t text_bg_color_index;
+  uint8_t block_size2;
+  uint8_t* plain_text_data;
+  uint8_t terminator;
 } GIF_PLAIN_TEXT_EXTENSION;
 
 // GIF application extension
 typedef struct {
-  unsigned char introducer;
-  unsigned char label;
-  unsigned char block_size;
-  unsigned char identifier[8];
-  unsigned char auth_code[3];
-  unsigned char block_size2;
-  unsigned char* application_data;
-  unsigned char terminator;
+  uint8_t introducer;
+  uint8_t label;
+  uint8_t block_size;
+  uint8_t identifier[8];
+  uint8_t auth_code[3];
+  uint8_t block_size2;
+  uint8_t* application_data;
+  uint8_t terminator;
 } GIF_APPLICATION_EXTENSION;
 
 typedef struct {
-  int index;
-  int bg_color_index;
+  int32_t index;
+  uint8_t bg_color_index;
   GIF_GRAPHIC_CONTROL_EXTENSION graphic_ctrl_ext;
   GIF_IMAGE_BLOCK image_block;
-  unsigned short* global_color_table_ptr;
-  unsigned short local_color_table[256];
-  int frame_data_size;
-  unsigned char* frame_data_ptr;
+  uint16_t* global_color_table_ptr;
+  uint16_t local_color_table[256];
+  int32_t frame_data_size;
+  uint8_t* frame_data_ptr;
 } GIF_IMAGE_FRAME;
 
 typedef struct {
 
   // file name
-  unsigned char* file_name;
+  uint8_t* file_name;
 
   // file handle
   FILE* fp;
 
   // brightness
-  int brightness;
+  int32_t brightness;
 
   // centering
-  int centering;
+  int32_t centering;
 
   // input buffer
-  int input_buffer_size;
+  size_t input_buffer_size;
   BUFFER_HANDLE* input_buffer;
 
   // output buffer
-  int output_buffer_size;
-  unsigned char* output_buffer;
+  size_t output_buffer_size;
+  uint8_t* output_buffer;
 
   // high memory use
-  int use_high_memory;
+  int32_t use_high_memory;
 
   // memory cache mode
-  int memory_cache_mode;
+  int32_t memory_cache_mode;
 
   // loop mode
-  int loop_mode;
+  int32_t loop_mode;
 
   // screen mode
-  int screen_mode;
+  int32_t screen_mode;
 
   // clear screen flag
-  int clear_screen;
+  int32_t clear_screen;
 
   // display width/height
-  int display_width;
-  int display_height;
+  int32_t display_width;
+  int32_t display_height;
 
   // actual screen width/height
-  int actual_screen_width;
-  int actual_screen_height;
+  int32_t actual_screen_width;
+  int32_t actual_screen_height;
 
   // display offset
-  int offset_x;
-  int offset_y;
+  int32_t offset_x;
+  int32_t offset_y;
 
   // RGB888 to RGB555 color map
-  unsigned short* rgb555_r;
-  unsigned short* rgb555_g;
-  unsigned short* rgb555_b;
+  uint16_t* rgb555_r;
+  uint16_t* rgb555_g;
+  uint16_t* rgb555_b;
 
   // global color table
-  unsigned short global_color_table[ 256 ];
+  uint16_t global_color_table[ 256 ];
 
   // image frames
-  int image_frame_count;
-  int image_frame_max;
-  int frame_rate;
+  int32_t image_frame_count;
+  int32_t image_frame_max;
+  int32_t frame_rate;
   GIF_IMAGE_FRAME* image_frames;
 
 } GIF_DECODE_HANDLE;
 
 // prototype declarations
-int gif_open(GIF_DECODE_HANDLE* gif, const unsigned char* file_name);
+int32_t gif_open(GIF_DECODE_HANDLE* gif, const uint8_t* file_name);
 void gif_close(GIF_DECODE_HANDLE* gif);
-int gif_load(GIF_DECODE_HANDLE* gif);
-int gif_describe(GIF_DECODE_HANDLE* gif);
+int32_t gif_load(GIF_DECODE_HANDLE* gif);
+int32_t gif_describe(GIF_DECODE_HANDLE* gif);
 
 #endif

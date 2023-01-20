@@ -1,36 +1,36 @@
 #include "lzw.h"
 
-int decode_lzw(unsigned char* input_buffer, int input_len, unsigned char* output_buffer, int min_code_size, int pixel_count) {
+size_t decode_lzw(uint8_t* input_buffer, size_t input_len, uint8_t* output_buffer, uint8_t min_code_size, size_t pixel_count) {
 
-  static short prefix[ MAX_LZW_STACK_SIZE ];
-  static short suffix[ MAX_LZW_STACK_SIZE ];
-  static unsigned char pixel_stack[ MAX_LZW_STACK_SIZE ];
+  static uint16_t prefix[ MAX_LZW_STACK_SIZE ];
+  static uint16_t suffix[ MAX_LZW_STACK_SIZE ];
+  static uint8_t pixel_stack[ MAX_LZW_STACK_SIZE ];
 
-  int clear_code = 1 << min_code_size;
-  int end_code = clear_code + 1;
+  int32_t clear_code = 1 << min_code_size;
+  int32_t end_code = clear_code + 1;
 
-  int data_size = min_code_size;
-  int available = clear_code + 2;
-  int old_code = -1;
-  int code_size = data_size + 1;
-  int code_mask = ( 1 << code_size ) - 1;
+  int32_t data_size = min_code_size;
+  int32_t available = clear_code + 2;
+  int32_t old_code = -1;
+  int32_t code_size = data_size + 1;
+  int32_t code_mask = ( 1 << code_size ) - 1;
 
-  int first = 0;
-  int pixel_sp = 0;
-  int datum = 0;
-  int bits = 0;
+  int32_t first = 0;
+  int32_t pixel_sp = 0;
+  int32_t datum = 0;
+  int32_t bits = 0;
 
-  int output_buffer_ofs = 0;
-  int input_buffer_ofs = 0;
+  int32_t output_buffer_ofs = 0;
+  int32_t input_buffer_ofs = 0;
 
-  for (int i = 0; i < clear_code; i++) {
+  for (int32_t i = 0; i < clear_code; i++) {
     prefix[i] = 0;
     suffix[i] = i;
   }
 
   while (output_buffer_ofs < pixel_count) {
 
-    int code, in_code;
+    int32_t code, in_code;
 
     if (pixel_sp == 0) {
 
