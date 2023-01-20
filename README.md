@@ -34,3 +34,17 @@ X680x0用のGIF画像ローダです。[XEiJ](https://stdkmd.net/xeij/)の[拡�
 
 アニメーションGIFは拙作 [mov2gif](https://github.com/tantanGH/mov2gif/) などで動画ファイルを変換して作ることができます。
     
+---
+
+### Special Thanks
+
+GIFフォーマットの仕様について、以下を参考にさせて頂きました。
+
+* [とほほのWWW入門・GIFフォーマットの詳細](https://www.tohoho-web.com/wwwgif.htm)
+
+GIFフォーマットのLZWでコードについて、以下の実装をCにコンバートして利用させて頂きました。(ライセンスMIT)
+今まで見た中でおそらく最も美しいGIF LZWデコードの実装だと思います。
+
+* [https://github.com/BaroqueEngine/GIFParser](https://github.com/BaroqueEngine/GIFParser)
+
+この場を借りてお礼申し上げます。
