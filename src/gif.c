@@ -784,9 +784,13 @@ int32_t gif_load(GIF_DECODE_HANDLE* gif) {
 
       if (gif->screen_mode == SCREEN_MODE_384x256) {
         // double buffering
+        REG_TADR[0] = 2;      // reset Timer-A counter
+        REG_TACR[0] = 8;      // start Timer-A in event count mode
         VDISPST((unsigned char*)vdisp_handler_double_buffering, 0, 1);
       } else {
         // single buffering
+        REG_TADR[0] = 2;      // reset Timer-A counter
+        REG_TACR[0] = 8;      // start Timer-A in event count mode
         VDISPST((unsigned char*)vdisp_handler_single_buffering, 0, 1);
       }
 
