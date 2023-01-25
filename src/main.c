@@ -21,7 +21,7 @@
 #include "crtc.h"
 #include "gif.h"
 
-#define VERSION "0.7.1"
+#define VERSION "0.7.2"
 
 //
 //  show help messages
