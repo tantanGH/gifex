@@ -533,6 +533,10 @@ int32_t gif_load(GIF_DECODE_HANDLE* gif) {
 
           // reallocate buffer for next decode
           decode_buffer_ptr = malloc_himem(decode_buffer_size, gif->use_high_memory);
+          if (decode_buffer_ptr == NULL) {
+            printf("error: memory allocation error.\n");
+            goto catch;
+          }
 
         } else {
 

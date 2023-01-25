@@ -59,7 +59,7 @@ OBJS =	$(addprefix $(INTERMEDIATE_DIR)/,$(patsubst %.c,%.o,$(C_SRCS))) \
 HLK_LINK_LIST = $(INTERMEDIATE_DIR)/_lk_list.tmp
 
 # Distribution package 
-PACKAGE_FILE = ../GIFEX071.ZIP
+PACKAGE_FILE = ../GIFEX072.ZIP
 
 # Document file
 DOCUMENT_FILE = GIFEX.DOC
