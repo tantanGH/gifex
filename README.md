@@ -36,6 +36,14 @@ X680x0用のGIF画像ローダです。[XEiJ](https://stdkmd.net/xeij/)の[拡�
     
 ---
 
+### 実機によるGIFアニメーション再生例
+
+https://user-images.githubusercontent.com/121137457/215325813-f0d3b2cc-ab59-48f8-b1fe-951dca339fa2.mp4
+
+X68030 + 060turbo + ハイメモリ (300x225px,384x256モード,30fps)
+
+---
+
 ### Special Thanks
 
 GIFフォーマットの仕様について、以下を参考にさせて頂きました。
@@ -48,11 +56,3 @@ GIFフォーマットのLZWデコードについて、以下の実装をCにコ�
 * [https://github.com/BaroqueEngine/GIFParser](https://github.com/BaroqueEngine/GIFParser)
 
 この場を借りてお礼申し上げます。
-
----
-
-### 実機によるアニメーション再生例
-
-https://user-images.githubusercontent.com/121137457/215325813-f0d3b2cc-ab59-48f8-b1fe-951dca339fa2.mp4
-
-X68030 + 060turbo + ハイメモリ (300x225px,384x256モード,30fps)
