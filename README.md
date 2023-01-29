@@ -50,7 +50,7 @@ GIFフォーマットの仕様について、以下を参考にさせて頂き�
 
 * [とほほのWWW入門・GIFフォーマットの詳細](https://www.tohoho-web.com/wwwgif.htm)
 
-GIFフォーマットのLZWデコードについて、以下のmiku氏によるTypescript版の実装をCにコンバートして利用させて頂きました。
+GIFフォーマットのLZWデコードについて、以下のmiku(@mikusato)氏によるTypescript版の実装をCにコンバートして利用させて頂きました。
 今まで見た中でおそらく最も美しいGIF LZWデコードの実装だと思います。
 
 * [https://github.com/BaroqueEngine/GIFParser](https://github.com/BaroqueEngine/GIFParser)
