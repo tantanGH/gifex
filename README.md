@@ -10,7 +10,7 @@ X680x0用のGIF画像ローダです。[XEiJ](https://stdkmd.net/xeij/)の[拡�
 
 ![](https://github.com/tantanGH/distribution/raw/main/images/gif_demo1.gif)
 
-* [GIFEX072.ZIP](https://github.com/tantanGH/distribution/raw/main/GIFEX072.ZIP) GIFEX.X 0.7.2 実行ファイル
+* [GIFEX080.ZIP](https://github.com/tantanGH/gifex/raw/main/GIFEX080.ZIP) GIFEX.X 0.8.0 実行ファイル
 
 
       GIFEX - GIF image loader for X680x0 version 0.x.x by tantan
