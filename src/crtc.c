@@ -55,12 +55,11 @@ int32_t initialize_screen(int32_t mode) {
 
       VDC_R0[0] = 3;            // memory mode 3
 
-//      SCON[1] = 0x000b + 4;   // R02 + 4
-
-//      WAIT_SCON;
-//      SCON[0] = 0xff;         // 256 color mode: R00  else: 0xff
-//      SCON[2] = 0x28;         // R06
-//      SCON[3] = 0x11;         // R20 & 0xff
+      REG_SCON[1] = 0x000b + 4;   // HDISP R02 + 4
+      WAIT_SCON;
+      REG_SCON[0] = 0x00ff;       // H-TOTAL 256 color mode: R00  else: 0xff
+      REG_SCON[2] = 0x0028;       // VDISP R06
+      REG_SCON[3] = 0x0011;       // 31kHz, V 256, H 512 (= R20 & 0xff)
 
       VDC_R2[0] = 0x2f;         // test/graphic on, sprite off (w:512 h:512)
 
@@ -116,12 +115,11 @@ int32_t initialize_screen(int32_t mode) {
 
       VDC_R0[0] = 3;              // memory mode 3
 
-//      SCON[1] = 0x0011 + 4;     // R02 + 4
-
-//      WAIT_SCON;
-//      SCON[0] = 0xff;           // 256 color: R00  else: 0xff
-//      SCON[2] = 0x28;           // R06
-//      SCON[3] = 0x15;           // R20 & 0xff
+      REG_SCON[1] = 0x0011 + 4;   // HDISP = R02 + 4
+      WAIT_SCON;
+      REG_SCON[0] = 0x00ff;       // H-TOTAL = 256 color: R00  else: 0xff
+      REG_SCON[2] = 0x0028;       // VDISP = R06
+      REG_SCON[3] = 0x0015;       // 31kHz, V512, H512 (= R20 & 0xff)
 
       VDC_R2[0] = 0x2f;           // text/graphic on, sprite off (w:512 h:512)
 
@@ -178,12 +176,11 @@ int32_t initialize_screen(int32_t mode) {
 
       VDC_R0[0] = 3;              // memory mode 3
 
-//      SCON[1] = 0x001c + 4;
-
-//      WAIT_SCON;
-//      SCON[0] = 0xff;           // 256 color: R00  else: 0xff
-//      SCON[2] = 0x28;           // R06
-//      SCON[3] = 0x16;           // R20 & 0xff
+      REG_SCON[1] = 0x001c + 4;       // H-DISP
+      WAIT_SCON;
+      REG_SCON[0] = 0x00ff;           // H-TOTAL = 256 color: R00  else: 0xff
+      REG_SCON[2] = 0x0028;           // V-DISP = R06
+      REG_SCON[3] = 0x0016;           // 31kHz, V 512, H 768 (= R20 & 0xff)
 
       VDC_R2[0] = 0x2f;           // text/graphic on, sprite off (w:512 h:512)
 
@@ -220,12 +217,11 @@ int32_t initialize_screen(int32_t mode) {
 
       VDC_R0[0] = 7;              // memory mode 7 (for XEiJ only)
   
-//      SCON[1] = 0x001c + 4;     // R02 + 0x04
-
-//      WAIT_SCON;
-//      SCON[0] = 0xff;           // 256 color: R00  else: 0xff
-//      SCON[2] = 0x28;           // R06
-//      SCON[3] = 0x16;           // R20 & 0xff
+      REG_SCON[1] = 0x001c + 4;       // R02 + 0x04
+      WAIT_SCON;
+      REG_SCON[0] = 0x00ff;           // 256 color: R00  else: 0xff
+      REG_SCON[2] = 0x0028;           // R06
+      REG_SCON[3] = 0x0016;           // R20 & 0xff
 
       VDC_R2[0] = 0x30;           // text/graphic on (w:1024 h:1024)
 

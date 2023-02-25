@@ -19,30 +19,36 @@
 #include <iocslib.h>
 
 #include "crtc.h"
+#include "himem.h"
 #include "gif.h"
 
-#define VERSION "0.7.2"
+#define VERSION "0.8.0 (2023/02/26)"
 
 //
 //  show help messages
 //
 static void show_help_message() {
-  printf("GIFEX - GIF image loader with XEiJ graphic extension support version " VERSION " by tantan 2022-2023\n");
+  printf("GIFEX - GIF image loader for X680x0 version " VERSION " by tantan\n");
   printf("usage: gifex.x [options] <image.gif>\n");
   printf("options:\n");
-  printf("   -b<n> ... buffer memory size factor[1-24] (default:4)\n");
   printf("   -c ... clear graphic screen\n");
-  printf("   -f<n> ... max number of frames (default:no limit)\n");
-  printf("   -h ... show this help message\n");
-  printf("   -i ... show file information\n");
-  printf("   -l ... loop mode\n");
-  printf("   -m ... memory cache mode\n");
   printf("   -n ... image centering\n");
-  printf("   -o<x,y> ... display offset position\n");
   printf("   -s<n> ... screen mode 0:384x256, 1:512x512, 2:768x512, 3:768x512(full - XEiJ only)\n");
-  printf("   -u ... use high memory\n");
   printf("   -v<n> ... brightness (0-100)\n");
+//  printf("   -o<x,y> ... display offset position\n");
+  printf("\n");
+  printf("   -m ... memory cache mode\n");
+  printf("   -l ... loop mode\n");
+  printf("\n");
+  printf("   -b<n> ... buffer memory size factor[1-24] (default:4)\n");
+  printf("   -u ... use 060turbo/TS-6BE16 high memory\n");
+  printf("\n");
+  printf("   -f<n> ... max number of frames (default:no limit)\n");
   printf("   -w<n> ... frame rate (0:no wait, n:n frames/sec, default:auto)\n");
+  printf("\n");
+  printf("   -i ... show file information\n");
+  printf("   -h ... show this help message\n");
+
 }
 
 //
@@ -90,6 +96,10 @@ int32_t main(int32_t argc, uint8_t* argv[]) {
       } else if (argv[i][1] == 'm') {
         gif->memory_cache_mode = 1;
       } else if (argv[i][1] == 'u') {
+        if (!himem_isavailable()) {
+          printf("error: high memory driver is not installed.\n");
+          goto exit;
+        }
         gif->use_high_memory = 1;        
       } else if (argv[i][1] == 'v' && strlen(argv[i]) >= 3) {
         gif->brightness = atoi(argv[i]+2);

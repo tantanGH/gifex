@@ -25,20 +25,20 @@ TARGET_FILE = GIFEX.X
 INCLUDE_FLAGS = -I${XDEV68K_DIR}/include/xc -I${XDEV68K_DIR}/include/xdev68k
 
 # コンパイルフラグ
-COMMON_FLAGS = -m68000 -Os $(INCLUDE_FLAGS) -z-stack=65536
+COMMON_FLAGS = -m68000 -Os $(INCLUDE_FLAGS) -z-stack=32768
 CFLAGS = $(COMMON_FLAGS) -Wno-builtin-declaration-mismatch -fcall-used-d2 -fcall-used-a2 \
     -fexec-charset=cp932 -fverbose-asm -fno-defer-pop \
 	  -D__time_t_defined -D__clock_t_defined \
 	  -D__XDEV68K__
 
 # *.c ソースファイル
-C_SRCS = memory.c crtc.c buffer.c lzw.c gif.c main.c
+C_SRCS = crtc.c himem.c buffer.c lzw.c gif.c main.c
 
 # *.s ソースファイル
 ASM_SRCS = 
 
 # *.h source files
-HEADER_SRCS = buffer.h crtc.h gif.h lzw.h memory.h
+HEADER_SRCS = crtc.h himem.h buffer.h lzw.h gif.h
 
 # リンク対象のライブラリファイル
 LIBS =\
@@ -59,7 +59,7 @@ OBJS =	$(addprefix $(INTERMEDIATE_DIR)/,$(patsubst %.c,%.o,$(C_SRCS))) \
 HLK_LINK_LIST = $(INTERMEDIATE_DIR)/_lk_list.tmp
 
 # Distribution package 
-PACKAGE_FILE = ../GIFEX072.ZIP
+PACKAGE_FILE = ../GIFEX080.ZIP
 
 # Document file
 DOCUMENT_FILE = GIFEX.DOC
