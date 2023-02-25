@@ -4,13 +4,11 @@ Animated GIF loader for X680x0/Human68k
 
 ---
 
-X680x0用のGIF画像ローダです。[XEiJ](https://stdkmd.net/xeij/)の[拡張グラフィック画面](https://stdkmd.net/xeij/feature.htm#extendedgraphic)に対応しており、最大1024x1024x32768色の表示が可能です。ハイメモリをバッファとして利用可能です。
+X680x0用のGIF画像ローダです。[XEiJ](https://stdkmd.net/xeij/)の[拡張グラフィック画面](https://stdkmd.net/xeij/feature.htm#extendedgraphic)に対応しており、最大1024x1024x32768色の表示が可能です。060turbo/TS-6BE16ハイメモリをバッファとして利用可能です。
 
 アニメーションにも対応していますが、表示タイミングは厳密ではありません。
 
 ![](https://github.com/tantanGH/distribution/raw/main/images/gif_demo1.gif)
-
-* [GIFEX080.ZIP](https://github.com/tantanGH/gifex/raw/main/GIFEX080.ZIP) GIFEX.X 0.8.0 実行ファイル
 
 
       GIFEX - GIF image loader for X680x0 version 0.x.x by tantan

@@ -22,7 +22,7 @@
 #include "himem.h"
 #include "gif.h"
 
-#define VERSION "0.8.0 (2023/02/26)"
+#define VERSION "0.8.1 (2023/02/26)"
 
 //
 //  show help messages
@@ -212,6 +212,12 @@ int32_t main(int32_t argc, uint8_t* argv[]) {
 
   // initialize palette (65536 colors)
   initialize_palette(gif->screen_mode);
+
+  if (gif->screen_mode == SCREEN_MODE_768x512_FULL && gif->clear_screen) {
+    // manual erase
+    struct FILLPTR fillptr = { 0, 0, 1023, 1023, 0 };
+    FILL(&fillptr);      
+  }
 
   // cursor display off
   C_CUROFF();
